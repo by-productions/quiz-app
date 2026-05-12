@@ -10,6 +10,7 @@ import type {
   AnswerOption,
   QuestionType,
 } from "@/lib/types";
+import { getOptionStyle, OptionShape } from "@/lib/optionStyle";
 
 type QuestionWithOptions = Question & { answer_options: AnswerOption[] };
 
@@ -149,7 +150,8 @@ export default function QuizEditorPage() {
   async function addOption(qid: string) {
     const q = questions.find((qq) => qq.id === qid);
     if (!q) return;
-    const lastPos = q.answer_options[q.answer_options.length - 1]?.position ?? -1;
+    const lastPos =
+      q.answer_options[q.answer_options.length - 1]?.position ?? -1;
     const { data, error: e } = await supabase
       .from("answer_options")
       .insert({
@@ -247,7 +249,7 @@ export default function QuizEditorPage() {
 
   if (loading) {
     return (
-      <main className="flex flex-1 items-center justify-center p-8 text-zinc-500">
+      <main className="flex flex-1 items-center justify-center p-8 text-white/50">
         טוען…
       </main>
     );
@@ -256,8 +258,8 @@ export default function QuizEditorPage() {
   if (!quiz) {
     return (
       <main className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
-        <p>חידון לא נמצא</p>
-        <Link href="/admin" className="text-indigo-600 hover:underline">
+        <p className="text-white/70">חידון לא נמצא</p>
+        <Link href="/admin" className="text-white/60 hover:text-white">
           חזרה לרשימה
         </Link>
       </main>
@@ -265,9 +267,9 @@ export default function QuizEditorPage() {
   }
 
   return (
-    <main className="flex flex-1 flex-col items-center gap-6 p-8 bg-zinc-50 dark:bg-black">
+    <main className="flex flex-1 flex-col items-center gap-6 p-6 sm:p-8">
       <div className="w-full max-w-3xl">
-        <Link href="/admin" className="text-sm text-indigo-600 hover:underline">
+        <Link href="/admin" className="text-sm text-white/50 hover:text-white">
           ← חזרה לרשימת חידונים
         </Link>
       </div>
@@ -275,33 +277,30 @@ export default function QuizEditorPage() {
       <input
         defaultValue={quiz.title}
         onBlur={(e) => saveQuizTitle(e.target.value)}
-        className="w-full max-w-3xl rounded-xl border border-transparent bg-transparent px-3 py-2 text-3xl font-bold focus:border-indigo-500 focus:outline-none"
+        className="w-full max-w-3xl bg-transparent border-b-2 border-transparent focus:border-violet-500 px-2 py-3 text-3xl sm:text-4xl font-bold text-white focus:outline-none"
         placeholder="שם החידון"
       />
 
       {error && (
-        <p className="w-full max-w-3xl text-rose-600 text-sm">{error}</p>
+        <p className="w-full max-w-3xl text-rose-400 text-sm">{error}</p>
       )}
 
       <div className="w-full max-w-3xl flex flex-col gap-4">
         {questions.length === 0 && (
-          <p className="text-center text-zinc-500">
+          <p className="text-center text-white/50 glass rounded-2xl p-8">
             עדיין אין שאלות. לחצי "הוסיפי שאלה" כדי להתחיל.
           </p>
         )}
 
         {questions.map((q, idx) => (
-          <div
-            key={q.id}
-            className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-5"
-          >
+          <div key={q.id} className="glass rounded-3xl p-5 sm:p-6">
             <header className="flex items-center justify-between gap-2 mb-3">
-              <h3 className="text-sm font-semibold text-zinc-500">
+              <h3 className="text-xs uppercase tracking-wider text-white/40">
                 שאלה {idx + 1}
               </h3>
               <button
                 onClick={() => deleteQuestion(q.id)}
-                className="text-xs text-rose-600 hover:text-rose-500"
+                className="text-xs text-rose-300 hover:text-rose-200"
               >
                 מחיקת שאלה
               </button>
@@ -310,26 +309,40 @@ export default function QuizEditorPage() {
             <input
               defaultValue={q.question_text}
               onBlur={(e) => saveQuestionText(q.id, e.target.value)}
-              className="w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 px-3 py-2 text-lg focus:border-indigo-500 focus:outline-none"
+              className="input-surface w-full rounded-2xl px-4 py-3 text-lg"
               placeholder="טקסט השאלה"
             />
 
-            <div className="mt-3 flex gap-4 text-sm">
-              <label className="flex items-center gap-2 cursor-pointer">
+            <div className="mt-4 flex gap-3 text-sm">
+              <label
+                className={`flex items-center gap-2 cursor-pointer rounded-full px-4 py-1.5 transition-colors ${
+                  q.type === "multiple_choice"
+                    ? "bg-white/15 text-white"
+                    : "text-white/50 hover:text-white"
+                }`}
+              >
                 <input
                   type="radio"
                   name={`type-${q.id}`}
                   checked={q.type === "multiple_choice"}
                   onChange={() => changeQuestionType(q.id, "multiple_choice")}
+                  className="sr-only"
                 />
                 רב-ברירה
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label
+                className={`flex items-center gap-2 cursor-pointer rounded-full px-4 py-1.5 transition-colors ${
+                  q.type === "free_response"
+                    ? "bg-white/15 text-white"
+                    : "text-white/50 hover:text-white"
+                }`}
+              >
                 <input
                   type="radio"
                   name={`type-${q.id}`}
                   checked={q.type === "free_response"}
                   onChange={() => changeQuestionType(q.id, "free_response")}
+                  className="sr-only"
                 />
                 תגובה חופשית
               </label>
@@ -337,43 +350,60 @@ export default function QuizEditorPage() {
 
             {q.type === "multiple_choice" && (
               <div className="mt-4 flex flex-col gap-2">
-                <h4 className="text-xs font-semibold text-zinc-500">
-                  אפשרויות (סמני את הנכונה)
+                <h4 className="text-xs uppercase tracking-wider text-white/40">
+                  אפשרויות
                 </h4>
-                {q.answer_options.map((opt, oidx) => (
-                  <div key={opt.id} className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name={`correct-${q.id}`}
-                      checked={opt.is_correct}
-                      onChange={() => setCorrectOption(q.id, opt.id)}
-                      className="cursor-pointer"
-                      aria-label="סמני כתשובה נכונה"
-                    />
-                    <input
-                      defaultValue={opt.text}
-                      onBlur={(e) => saveOptionText(q.id, opt.id, e.target.value)}
-                      className="flex-1 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-900 px-3 py-2 focus:border-indigo-500 focus:outline-none"
-                      placeholder={`אפשרות ${oidx + 1}`}
-                    />
-                    <button
-                      onClick={() => deleteOption(q.id, opt.id)}
-                      disabled={q.answer_options.length <= 2}
-                      className="text-rose-600 hover:text-rose-500 disabled:opacity-30 text-xl px-2"
-                      aria-label="מחיקת אפשרות"
-                      title={
-                        q.answer_options.length <= 2
-                          ? "צריך לפחות 2 אפשרויות"
-                          : "מחיקה"
-                      }
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
+                {q.answer_options.map((opt, oidx) => {
+                  const style = getOptionStyle(oidx);
+                  return (
+                    <div key={opt.id} className="flex items-center gap-2">
+                      <div
+                        className={`h-9 w-9 shrink-0 rounded-xl bg-gradient-to-br ${style.gradient} p-2`}
+                      >
+                        <OptionShape
+                          shape={style.shape}
+                          className="h-full w-full text-white"
+                        />
+                      </div>
+                      <input
+                        defaultValue={opt.text}
+                        onBlur={(e) =>
+                          saveOptionText(q.id, opt.id, e.target.value)
+                        }
+                        className="input-surface flex-1 rounded-xl px-3 py-2"
+                        placeholder={`אפשרות ${oidx + 1}`}
+                      />
+                      <label
+                        className="cursor-pointer flex items-center gap-1 text-xs text-white/60 hover:text-white"
+                        title="סמני כתשובה נכונה"
+                      >
+                        <input
+                          type="radio"
+                          name={`correct-${q.id}`}
+                          checked={opt.is_correct}
+                          onChange={() => setCorrectOption(q.id, opt.id)}
+                        />
+                        נכון
+                      </label>
+                      <button
+                        onClick={() => deleteOption(q.id, opt.id)}
+                        disabled={q.answer_options.length <= 2}
+                        className="text-rose-300 hover:text-rose-200 disabled:opacity-30 text-lg px-2"
+                        aria-label="מחיקת אפשרות"
+                        title={
+                          q.answer_options.length <= 2
+                            ? "צריך לפחות 2 אפשרויות"
+                            : "מחיקה"
+                        }
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                })}
                 <button
                   onClick={() => addOption(q.id)}
-                  className="self-start text-sm text-indigo-600 hover:text-indigo-500"
+                  className="self-start mt-1 text-sm text-white/60 hover:text-white"
                 >
                   + הוספת אפשרות
                 </button>
@@ -381,7 +411,7 @@ export default function QuizEditorPage() {
             )}
 
             {q.type === "free_response" && (
-              <p className="mt-3 text-sm text-zinc-500">
+              <p className="mt-4 text-sm text-white/50">
                 המשתתפים יקלידו תגובה חופשית בטקסט.
               </p>
             )}
@@ -390,7 +420,7 @@ export default function QuizEditorPage() {
 
         <button
           onClick={addQuestion}
-          className="self-center rounded-full bg-indigo-600 px-6 py-3 font-semibold text-white hover:bg-indigo-500"
+          className="self-center gradient-bg brand-glow rounded-full px-7 py-3 font-bold text-white hover:scale-105 transition-transform"
         >
           + הוסיפי שאלה
         </button>

@@ -43,7 +43,7 @@ export default function PlayJoinPage() {
       return;
     }
 
-    if (session.state === "ended") {
+    if ((session as { state: string }).state === "ended") {
       setError("המשחק כבר הסתיים");
       setJoining(false);
       return;
@@ -51,7 +51,10 @@ export default function PlayJoinPage() {
 
     const { data: participant, error: partErr } = await supabase
       .from("participants")
-      .insert({ session_id: session.id, nickname: trimmedNick })
+      .insert({
+        session_id: (session as { id: string }).id,
+        nickname: trimmedNick,
+      })
       .select()
       .single();
 
@@ -61,47 +64,62 @@ export default function PlayJoinPage() {
       return;
     }
 
-    router.push(`/play/${session.id}/${participant.id}`);
+    router.push(
+      `/play/${(session as { id: string }).id}/${(participant as { id: string }).id}`,
+    );
   }
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-6 p-8 bg-zinc-50 dark:bg-black">
-      <h1 className="text-3xl font-bold">הצטרפות למשחק</h1>
-      <form onSubmit={join} className="flex flex-col gap-4 w-full max-w-sm">
-        <label className="flex flex-col gap-1">
-          <span className="text-sm text-zinc-500">קוד משחק (6 ספרות)</span>
+    <main className="flex flex-1 flex-col items-center justify-center gap-8 p-6">
+      <header className="text-center">
+        <h1 className="text-4xl sm:text-5xl font-bold gradient-text">
+          הצטרפות למשחק
+        </h1>
+      </header>
+
+      <form
+        onSubmit={join}
+        className="glass-strong rounded-3xl p-6 sm:p-8 flex flex-col gap-5 w-full max-w-sm"
+      >
+        <label className="flex flex-col gap-2">
+          <span className="text-xs uppercase tracking-wider text-white/50">
+            קוד משחק
+          </span>
           <input
             type="text"
             inputMode="numeric"
             value={code}
-            onChange={(e) => setCode(e.target.value)}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
             maxLength={6}
-            className="rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-4 py-3 text-2xl font-mono tracking-widest text-center"
+            className="input-surface rounded-2xl px-5 py-4 text-4xl font-mono tracking-[0.3em] text-center"
             placeholder="000000"
             autoFocus
           />
         </label>
-        <label className="flex flex-col gap-1">
-          <span className="text-sm text-zinc-500">כינוי</span>
+        <label className="flex flex-col gap-2">
+          <span className="text-xs uppercase tracking-wider text-white/50">
+            כינוי
+          </span>
           <input
             type="text"
             value={nickname}
             onChange={(e) => setNickname(e.target.value)}
             maxLength={30}
-            className="rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-4 py-3"
+            className="input-surface rounded-2xl px-5 py-3 text-lg"
             placeholder="השם שלך"
           />
         </label>
-        {error && <p className="text-rose-600 text-sm">{error}</p>}
+        {error && <p className="text-rose-400 text-sm text-center">{error}</p>}
         <button
           type="submit"
           disabled={joining}
-          className="rounded-full bg-rose-600 px-6 py-3 font-semibold text-white hover:bg-rose-500 disabled:opacity-50"
+          className="gradient-bg brand-glow rounded-full px-6 py-4 font-bold text-white text-lg hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:hover:scale-100"
         >
-          {joining ? "מצטרפת…" : "הצטרפי"}
+          {joining ? "מצטרפת…" : "הצטרפי →"}
         </button>
       </form>
-      <Link href="/" className="mt-4 text-rose-600 hover:underline">
+
+      <Link href="/" className="text-sm text-white/50 hover:text-white">
         חזרה לדף הבית
       </Link>
     </main>

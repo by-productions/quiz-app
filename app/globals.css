@@ -1,26 +1,99 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Base palette — dark premium */
+  --background-from: #0a0e1a;
+  --background-via: #14102a;
+  --background-to: #1a0a2e;
+
+  --foreground: #ffffff;
+  --foreground-muted: rgba(255, 255, 255, 0.6);
+  --foreground-faint: rgba(255, 255, 255, 0.4);
+
+  /* Brand accent gradient (overridable per quiz via inline style) */
+  --accent-from: #8b5cf6;
+  --accent-to: #ec4899;
+
+  /* Glass surfaces */
+  --surface: rgba(255, 255, 255, 0.05);
+  --surface-strong: rgba(255, 255, 255, 0.08);
+  --surface-hover: rgba(255, 255, 255, 0.1);
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.2);
 }
 
 @theme inline {
-  --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+body {
+  background:
+    radial-gradient(ellipse at top left, rgba(139, 92, 246, 0.15), transparent 50%),
+    radial-gradient(ellipse at bottom right, rgba(236, 72, 153, 0.12), transparent 50%),
+    linear-gradient(135deg, var(--background-from) 0%, var(--background-via) 50%, var(--background-to) 100%);
+  background-attachment: fixed;
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  min-height: 100vh;
 }
 
-body {
-  background: var(--background);
+/* Glass card */
+.glass {
+  background: var(--surface);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid var(--border);
+}
+
+.glass-strong {
+  background: var(--surface-strong);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  border: 1px solid var(--border-strong);
+}
+
+.glass-hover {
+  transition: background 0.15s, border-color 0.15s, transform 0.15s;
+}
+.glass-hover:hover {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+}
+
+/* Gradient text using brand accent */
+.gradient-text {
+  background-image: linear-gradient(135deg, var(--accent-from), var(--accent-to));
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}
+
+.gradient-bg {
+  background-image: linear-gradient(135deg, var(--accent-from), var(--accent-to));
+}
+
+/* Brand glow */
+.brand-glow {
+  box-shadow:
+    0 10px 40px -10px color-mix(in srgb, var(--accent-from) 50%, transparent),
+    0 0 0 1px var(--border);
+}
+
+/* Subtle "premium" surface for inputs etc */
+.input-surface {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  transition: border-color 0.15s, background 0.15s;
+}
+.input-surface:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.07);
+  border-color: var(--accent-from);
+}
+.input-surface::placeholder {
+  color: var(--foreground-faint);
 }

@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { GameSession, Question, AnswerOption } from "@/lib/types";
+import { getOptionStyle, OptionShape } from "@/lib/optionStyle";
 
 type MyResponse = { option_id?: string; text?: string } | null;
 
@@ -94,8 +95,8 @@ export default function PlaySessionPage() {
       setQuestion((questionRes.data as Question) ?? null);
       setOptions((optionsRes.data ?? []) as AnswerOption[]);
       const prior =
-        (existingRes.data as { answer_data?: MyResponse } | null)?.answer_data ??
-        null;
+        (existingRes.data as { answer_data?: MyResponse } | null)
+          ?.answer_data ?? null;
       setMyResponse(prior);
       setFreeText("");
     })();
@@ -140,8 +141,8 @@ export default function PlaySessionPage() {
   if (error) {
     return (
       <main className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
-        <p className="text-rose-600">{error}</p>
-        <Link href="/play" className="text-rose-600 hover:underline">
+        <p className="text-rose-400">{error}</p>
+        <Link href="/play" className="text-white/60 hover:text-white">
           חזרה
         </Link>
       </main>
@@ -150,42 +151,68 @@ export default function PlaySessionPage() {
 
   if (!session) {
     return (
-      <main className="flex flex-1 flex-col items-center justify-center p-8 text-zinc-500">
+      <main className="flex flex-1 items-center justify-center p-8 text-white/50">
         טוען…
       </main>
     );
   }
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-6 p-8 bg-zinc-50 dark:bg-black">
+    <main className="flex flex-1 flex-col items-center justify-center gap-6 p-5">
       {session.state === "waiting" && (
-        <p className="text-xl text-zinc-600 dark:text-zinc-400">
-          ⏳ ממתינים שהמנחה תתחיל את המשחק…
-        </p>
+        <div className="flex flex-col items-center gap-4 text-center">
+          <div className="relative h-16 w-16">
+            <div className="absolute inset-0 rounded-full gradient-bg opacity-40 animate-ping" />
+            <div className="absolute inset-3 rounded-full gradient-bg" />
+          </div>
+          <p className="text-xl font-semibold text-white">
+            ממתינים שהמנחה תתחיל
+          </p>
+          <p className="text-sm text-white/50">המסך יקפוץ אוטומטית</p>
+        </div>
       )}
 
       {session.state === "question_active" && question && (
-        <>
-          <h2 className="text-2xl font-bold text-center">
+        <div className="flex flex-col items-center gap-6 w-full max-w-md">
+          <h2 className="text-2xl sm:text-3xl font-bold text-center text-white leading-tight">
             {question.question_text}
           </h2>
 
           {question.type === "multiple_choice" && (
-            <div className="grid w-full max-w-md gap-3">
-              {options.map((opt) => {
+            <div className="grid w-full gap-3 grid-cols-1 sm:grid-cols-2">
+              {options.map((opt, idx) => {
+                const style = getOptionStyle(idx);
                 const isSelected = myResponse?.option_id === opt.id;
+                const disabled = !!myResponse;
                 return (
                   <button
                     key={opt.id}
                     onClick={() => voteMC(opt.id)}
-                    disabled={!!myResponse}
-                    className={`rounded-2xl border-2 px-6 py-4 text-lg font-semibold transition-colors ${
+                    disabled={disabled}
+                    className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${style.gradient} px-5 py-6 text-right transition-all ${
                       isSelected
-                        ? "border-rose-500 bg-rose-50 dark:bg-rose-950"
-                        : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 hover:border-rose-300"
-                    } disabled:cursor-not-allowed disabled:opacity-60`}
+                        ? "ring-4 ring-white scale-[1.02]"
+                        : disabled
+                        ? "opacity-40"
+                        : "active:scale-95"
+                    }`}
+                    style={{
+                      boxShadow: isSelected
+                        ? `0 10px 40px -5px ${style.hex}aa`
+                        : `0 6px 20px -8px ${style.hex}66`,
+                    }}
                   >
-                    {opt.text}
+                    <div className="flex items-center gap-3">
+                      <div className="h-9 w-9 shrink-0 text-white/95">
+                        <OptionShape
+                          shape={style.shape}
+                          className="h-full w-full"
+                        />
+                      </div>
+                      <div className="flex-1 text-lg font-bold text-white drop-shadow">
+                        {opt.text || `אפשרות ${idx + 1}`}
+                      </div>
+                    </div>
                   </button>
                 );
               })}
@@ -195,25 +222,27 @@ export default function PlaySessionPage() {
           {question.type === "free_response" && (
             <>
               {myResponse?.text ? (
-                <div className="w-full max-w-md rounded-2xl border-2 border-rose-500 bg-rose-50 dark:bg-rose-950 px-4 py-3">
-                  <div className="text-xs text-zinc-500 mb-1">התגובה שלך:</div>
-                  <div className="text-lg">{myResponse.text}</div>
+                <div className="glass-strong w-full rounded-3xl px-5 py-4">
+                  <div className="text-xs uppercase tracking-wider text-white/50 mb-1">
+                    התגובה שלך
+                  </div>
+                  <div className="text-lg text-white">{myResponse.text}</div>
                 </div>
               ) : (
-                <div className="w-full max-w-md flex flex-col gap-3">
+                <div className="w-full flex flex-col gap-3">
                   <textarea
                     value={freeText}
                     onChange={(e) => setFreeText(e.target.value)}
                     placeholder="כתבי את התגובה שלך…"
                     rows={4}
-                    className="rounded-2xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-4 py-3 focus:border-rose-500 focus:outline-none resize-none"
+                    className="input-surface rounded-2xl px-5 py-4 text-lg resize-none"
                   />
                   <button
                     onClick={submitFreeText}
                     disabled={submitting || !freeText.trim()}
-                    className="rounded-full bg-rose-600 px-6 py-3 font-semibold text-white hover:bg-rose-500 disabled:opacity-50"
+                    className="gradient-bg brand-glow rounded-full px-6 py-4 font-bold text-white text-lg hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:hover:scale-100"
                   >
-                    {submitting ? "שולחת…" : "שלחי"}
+                    {submitting ? "שולחת…" : "שלחי תגובה"}
                   </button>
                 </div>
               )}
@@ -221,26 +250,34 @@ export default function PlaySessionPage() {
           )}
 
           {myResponse && (
-            <p className="text-sm text-zinc-500">
-              תשובתך נשלחה. ממתינים לאחרים…
+            <p className="text-sm text-white/50 text-center">
+              ✓ תשובתך נשלחה. ממתינים לאחרים…
             </p>
           )}
-        </>
+        </div>
       )}
 
       {session.state === "showing_results" && (
-        <p className="text-xl text-zinc-600 dark:text-zinc-400 text-center">
-          📊 המנחה מציגה את התוצאות על המסך הגדול
-        </p>
+        <div className="flex flex-col items-center gap-4 text-center">
+          <div className="text-5xl">📊</div>
+          <p className="text-xl font-semibold text-white">
+            המנחה מציגה את התוצאות
+          </p>
+          <p className="text-sm text-white/50">המסך הגדול ↑</p>
+        </div>
       )}
 
       {session.state === "ended" && (
-        <>
-          <p className="text-2xl font-bold">המשחק הסתיים 🎉</p>
-          <Link href="/play" className="text-rose-600 hover:underline">
+        <div className="flex flex-col items-center gap-5 text-center">
+          <h2 className="text-4xl font-bold gradient-text">המשחק הסתיים</h2>
+          <p className="text-2xl">🎉</p>
+          <Link
+            href="/play"
+            className="glass glass-hover rounded-full px-8 py-3 text-white"
+          >
             הצטרפות למשחק חדש
           </Link>
-        </>
+        </div>
       )}
     </main>
   );

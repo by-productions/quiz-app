@@ -10,6 +10,7 @@ import type {
   AnswerOption,
   Participant,
 } from "@/lib/types";
+import { getOptionStyle, OptionShape } from "@/lib/optionStyle";
 
 type FullQuestion = Question & { answer_options: AnswerOption[] };
 
@@ -29,7 +30,6 @@ export default function HostSessionPage() {
   const [responseTick, setResponseTick] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  // Initial load
   useEffect(() => {
     if (!sessionId) return;
     let cancelled = false;
@@ -52,7 +52,11 @@ export default function HostSessionPage() {
         .eq("quiz_id", (sessionData as GameSession).quiz_id)
         .order("position");
       if (cancelled) return;
-      setQuestions((questionsData ?? []) as unknown as FullQuestion[]);
+      const qs = (questionsData ?? []) as unknown as FullQuestion[];
+      qs.forEach((q) =>
+        q.answer_options.sort((a, b) => a.position - b.position),
+      );
+      setQuestions(qs);
 
       const { data: partsData } = await supabase
         .from("participants")
@@ -67,7 +71,6 @@ export default function HostSessionPage() {
     };
   }, [sessionId, supabase]);
 
-  // Realtime
   useEffect(() => {
     if (!sessionId) return;
     const channel = supabase
@@ -109,7 +112,6 @@ export default function HostSessionPage() {
     };
   }, [sessionId, supabase]);
 
-  // Fetch responses for current question (refetched on tick / question change)
   useEffect(() => {
     const qid = session?.current_question_id;
     if (!qid) {
@@ -144,7 +146,6 @@ export default function HostSessionPage() {
     (q) => q.id === session?.current_question_id,
   );
 
-  // Derived: MC counts
   const responseCounts: Record<string, number> = {};
   for (const r of responses) {
     if (r.answer_data.option_id) {
@@ -153,7 +154,6 @@ export default function HostSessionPage() {
     }
   }
 
-  // Derived: free responses
   const freeResponses = responses
     .filter((r) => typeof r.answer_data.text === "string")
     .map((r) => ({ text: r.answer_data.text as string, nickname: r.nickname }));
@@ -201,8 +201,8 @@ export default function HostSessionPage() {
   if (error) {
     return (
       <main className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
-        <p className="text-rose-600">{error}</p>
-        <Link href="/host" className="text-emerald-600 hover:underline">
+        <p className="text-rose-400">{error}</p>
+        <Link href="/host" className="text-white/60 hover:text-white">
           חזרה לרשימת החידונים
         </Link>
       </main>
@@ -211,7 +211,7 @@ export default function HostSessionPage() {
 
   if (!session) {
     return (
-      <main className="flex flex-1 flex-col items-center justify-center p-8 text-zinc-500">
+      <main className="flex flex-1 items-center justify-center p-8 text-white/50">
         טוען…
       </main>
     );
@@ -222,29 +222,43 @@ export default function HostSessionPage() {
       questions.length - 1
     : false;
 
+  const totalQIndex = currentQuestion
+    ? questions.findIndex((q) => q.id === currentQuestion.id) + 1
+    : 0;
+
   return (
-    <main className="flex flex-1 flex-col items-center gap-8 p-8 bg-zinc-50 dark:bg-black">
+    <main className="flex flex-1 flex-col items-center gap-10 p-6 sm:p-10">
       {session.state === "waiting" && (
-        <>
-          <p className="text-center text-zinc-500 text-sm">
-            פתחו את <span className="font-mono">/play</span> והקלידו את הקוד
+        <div className="flex flex-col items-center gap-8 max-w-5xl w-full">
+          <p className="text-sm uppercase tracking-[0.2em] text-white/40">
+            הצטרפות
           </p>
-          <p className="font-mono text-7xl sm:text-8xl font-bold tracking-widest text-emerald-600">
+          <p
+            className="font-mono font-extrabold tracking-[0.18em] gradient-text"
+            style={{ fontSize: "clamp(4rem, 18vw, 12rem)", lineHeight: 1 }}
+          >
             {session.join_code}
           </p>
+          <p className="text-white/60 text-sm sm:text-base">
+            פתחו <span className="font-mono text-white">/play</span> והקלידו את
+            הקוד
+          </p>
 
-          <div className="w-full max-w-md rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-4">
-            <h3 className="text-sm font-semibold text-zinc-500 mb-2">
+          <div className="glass rounded-3xl p-6 w-full max-w-md">
+            <h3 className="text-xs uppercase tracking-wider text-white/40 mb-3">
               משתתפים ({participants.length})
             </h3>
             {participants.length === 0 ? (
-              <p className="text-zinc-500 text-sm">
-                עדיין אין משתתפים. שתפי את הקוד.
+              <p className="text-white/50 text-sm text-center py-4">
+                ממתינים למצטרפים…
               </p>
             ) : (
-              <ul className="space-y-1">
+              <ul className="flex flex-wrap gap-2">
                 {participants.map((p) => (
-                  <li key={p.id} className="text-zinc-800 dark:text-zinc-200">
+                  <li
+                    key={p.id}
+                    className="rounded-full bg-white/10 px-3 py-1.5 text-sm text-white"
+                  >
                     {p.nickname}
                   </li>
                 ))}
@@ -255,124 +269,175 @@ export default function HostSessionPage() {
           <button
             onClick={startFirstQuestion}
             disabled={questions.length === 0 || participants.length === 0}
-            className="rounded-full bg-emerald-600 px-8 py-3 text-lg font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
+            className="gradient-bg brand-glow rounded-full px-10 py-4 text-lg font-bold text-white hover:scale-105 transition-transform disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100"
           >
             התחילי שאלה ראשונה
           </button>
           {participants.length === 0 && (
-            <p className="text-xs text-zinc-500">
-              (הכפתור יופעל אחרי שהמשתתף הראשון יצטרף)
+            <p className="text-xs text-white/40">
+              הכפתור יופעל אחרי שהמשתתף הראשון יצטרף
             </p>
           )}
-        </>
+        </div>
       )}
 
-      {session.state === "question_active" && currentQuestion && (
-        <>
-          <h2 className="text-3xl font-bold text-center">
-            {currentQuestion.question_text}
-          </h2>
-
-          {currentQuestion.type === "multiple_choice" && (
-            <div className="grid w-full max-w-2xl gap-3 sm:grid-cols-2">
-              {currentQuestion.answer_options.map((opt) => (
-                <div
-                  key={opt.id}
-                  className="rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 p-4"
-                >
-                  <div className="text-lg">{opt.text}</div>
-                  <div className="text-3xl font-bold mt-2 text-emerald-600">
-                    {responseCounts[opt.id] ?? 0}
-                  </div>
-                </div>
-              ))}
+      {(session.state === "question_active" ||
+        session.state === "showing_results") &&
+        currentQuestion && (
+          <div className="flex flex-col items-center gap-8 w-full max-w-6xl">
+            <div className="flex items-center gap-3 text-xs uppercase tracking-[0.2em] text-white/40">
+              <span>
+                שאלה {totalQIndex} / {questions.length}
+              </span>
+              <span className="h-1 w-1 rounded-full bg-white/30" />
+              <span>
+                {session.state === "question_active" ? "פעיל" : "תוצאות"}
+              </span>
             </div>
-          )}
 
-          {currentQuestion.type === "free_response" && (
-            <div className="rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 px-8 py-6 text-center">
-              <div className="text-sm text-zinc-500">תגובות שהתקבלו</div>
-              <div className="mt-1 text-5xl font-bold text-emerald-600">
-                {freeResponses.length}
-              </div>
-            </div>
-          )}
+            <h2
+              className="text-center font-bold text-white leading-tight"
+              style={{ fontSize: "clamp(1.75rem, 4.5vw, 3.5rem)" }}
+            >
+              {currentQuestion.question_text}
+            </h2>
 
-          <button
-            onClick={showResults}
-            className="rounded-full bg-amber-600 px-8 py-3 text-lg font-semibold text-white hover:bg-amber-500"
-          >
-            סיימי שאלה והצג תוצאות
-          </button>
-        </>
-      )}
-
-      {session.state === "showing_results" && currentQuestion && (
-        <>
-          <h2 className="text-2xl font-bold text-center">
-            תוצאות: {currentQuestion.question_text}
-          </h2>
-
-          {currentQuestion.type === "multiple_choice" && (
-            <div className="grid w-full max-w-2xl gap-3 sm:grid-cols-2">
-              {currentQuestion.answer_options.map((opt) => (
-                <div
-                  key={opt.id}
-                  className={`rounded-2xl border-2 p-4 ${
-                    opt.is_correct
-                      ? "bg-emerald-50 dark:bg-emerald-950 border-emerald-500"
-                      : "bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
-                  }`}
-                >
-                  <div className="text-lg">
-                    {opt.text} {opt.is_correct && "✓"}
-                  </div>
-                  <div className="text-3xl font-bold mt-2">
-                    {responseCounts[opt.id] ?? 0}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {currentQuestion.type === "free_response" && (
-            <div className="w-full max-w-2xl rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-4">
-              {freeResponses.length === 0 ? (
-                <p className="text-zinc-500 text-center">לא התקבלו תגובות</p>
-              ) : (
-                <ul className="space-y-2">
-                  {freeResponses.map((r, i) => (
-                    <li
-                      key={i}
-                      className="rounded-xl bg-zinc-50 dark:bg-zinc-900 px-3 py-2"
+            {currentQuestion.type === "multiple_choice" && (
+              <div className="grid w-full gap-4 sm:grid-cols-2">
+                {currentQuestion.answer_options.map((opt, idx) => {
+                  const style = getOptionStyle(idx);
+                  const count = responseCounts[opt.id] ?? 0;
+                  const totalVotes = Object.values(responseCounts).reduce(
+                    (a, b) => a + b,
+                    0,
+                  );
+                  const pct =
+                    totalVotes > 0
+                      ? Math.round((count / totalVotes) * 100)
+                      : 0;
+                  const isResults = session.state === "showing_results";
+                  const isCorrect = opt.is_correct;
+                  return (
+                    <div
+                      key={opt.id}
+                      className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${style.gradient} p-6 sm:p-7 ${
+                        isResults && !isCorrect ? "opacity-50" : ""
+                      } ${
+                        isResults && isCorrect
+                          ? "ring-4 ring-white/80 ring-offset-4 ring-offset-transparent"
+                          : ""
+                      }`}
+                      style={{
+                        boxShadow: `0 12px 40px -8px ${style.hex}66`,
+                      }}
                     >
-                      <span className="font-semibold text-indigo-600">
-                        {r.nickname}:
-                      </span>{" "}
-                      <span>{r.text}</span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          )}
+                      <div className="flex items-center gap-4">
+                        <div className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 text-white/95">
+                          <OptionShape
+                            shape={style.shape}
+                            className="h-full w-full"
+                          />
+                        </div>
+                        <div className="flex-1 text-xl sm:text-2xl font-bold text-white drop-shadow">
+                          {opt.text || `אפשרות ${idx + 1}`}
+                        </div>
+                        <div className="text-3xl sm:text-4xl font-extrabold text-white tabular-nums drop-shadow">
+                          {count}
+                        </div>
+                      </div>
+                      {isResults && (
+                        <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-white/20">
+                          <div
+                            className="h-full bg-white/95"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      )}
+                      {isResults && isCorrect && (
+                        <div className="absolute top-3 left-3 rounded-full bg-white text-emerald-700 px-2.5 py-0.5 text-xs font-bold">
+                          תשובה נכונה ✓
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
 
-          <button
-            onClick={nextQuestion}
-            className="rounded-full bg-emerald-600 px-8 py-3 text-lg font-semibold text-white hover:bg-emerald-500"
-          >
-            {isLastQuestion ? "סיימי משחק" : "שאלה הבאה"}
-          </button>
-        </>
-      )}
+            {currentQuestion.type === "free_response" &&
+              session.state === "question_active" && (
+                <div className="glass-strong rounded-3xl px-10 py-8 text-center">
+                  <p className="text-xs uppercase tracking-wider text-white/50">
+                    תגובות שהתקבלו
+                  </p>
+                  <p
+                    className="mt-2 font-extrabold gradient-text tabular-nums"
+                    style={{ fontSize: "clamp(3.5rem, 10vw, 7rem)", lineHeight: 1 }}
+                  >
+                    {freeResponses.length}
+                  </p>
+                </div>
+              )}
+
+            {currentQuestion.type === "free_response" &&
+              session.state === "showing_results" && (
+                <div className="w-full max-w-3xl glass rounded-3xl p-5 max-h-[60vh] overflow-y-auto">
+                  {freeResponses.length === 0 ? (
+                    <p className="text-white/50 text-center py-6">
+                      לא התקבלו תגובות
+                    </p>
+                  ) : (
+                    <ul className="space-y-2">
+                      {freeResponses.map((r, i) => (
+                        <li
+                          key={i}
+                          className="rounded-2xl bg-white/5 px-4 py-3 border border-white/5"
+                        >
+                          <span className="text-xs uppercase tracking-wider text-white/40">
+                            {r.nickname}
+                          </span>
+                          <div className="mt-1 text-lg text-white">
+                            {r.text}
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
+
+            {session.state === "question_active" && (
+              <button
+                onClick={showResults}
+                className="gradient-bg brand-glow rounded-full px-10 py-4 text-lg font-bold text-white hover:scale-105 transition-transform"
+              >
+                סיימי שאלה והצג תוצאות
+              </button>
+            )}
+            {session.state === "showing_results" && (
+              <button
+                onClick={nextQuestion}
+                className="gradient-bg brand-glow rounded-full px-10 py-4 text-lg font-bold text-white hover:scale-105 transition-transform"
+              >
+                {isLastQuestion ? "סיימי משחק" : "שאלה הבאה →"}
+              </button>
+            )}
+          </div>
+        )}
 
       {session.state === "ended" && (
-        <>
-          <h2 className="text-3xl font-bold">המשחק הסתיים 🎉</h2>
-          <Link href="/host" className="text-emerald-600 hover:underline">
+        <div className="flex flex-col items-center gap-6">
+          <h2 className="text-5xl sm:text-6xl font-bold gradient-text">
+            המשחק הסתיים
+          </h2>
+          <p className="text-white/60">תודה לכל המשתתפים 🎉</p>
+          <Link
+            href="/host"
+            className="glass glass-hover rounded-full px-8 py-3 text-white"
+          >
             התחלת משחק חדש
           </Link>
-        </>
+        </div>
       )}
     </main>
   );

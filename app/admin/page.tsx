@@ -46,7 +46,10 @@ export default function AdminIndexPage() {
 
   async function deleteQuiz(id: string) {
     if (!confirm("למחוק את החידון? לא ניתן לבטל.")) return;
-    const { error: delErr } = await supabase.from("quizzes").delete().eq("id", id);
+    const { error: delErr } = await supabase
+      .from("quizzes")
+      .delete()
+      .eq("id", id);
     if (delErr) {
       setError("שגיאה במחיקה: " + delErr.message);
       return;
@@ -55,44 +58,47 @@ export default function AdminIndexPage() {
   }
 
   return (
-    <main className="flex flex-1 flex-col items-center gap-8 p-8 bg-zinc-50 dark:bg-black">
-      <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-        ממשק יצירה
-      </h1>
+    <main className="flex flex-1 flex-col items-center gap-10 p-8">
+      <header className="text-center">
+        <h1 className="text-4xl sm:text-5xl font-bold gradient-text">
+          ממשק יצירה
+        </h1>
+        <p className="mt-3 text-white/60">החידונים שלי</p>
+      </header>
 
       <button
         onClick={createQuiz}
         disabled={creating}
-        className="rounded-full bg-indigo-600 px-6 py-3 font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+        className="gradient-bg brand-glow rounded-full px-7 py-3 font-bold text-white hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100"
       >
         {creating ? "יוצרת…" : "+ חידון חדש"}
       </button>
 
-      {error && <p className="text-rose-600">{error}</p>}
+      {error && <p className="text-rose-400">{error}</p>}
 
       <div className="grid w-full max-w-2xl gap-3">
         {quizzes === null && (
-          <p className="text-center text-zinc-500">טוען חידונים…</p>
+          <p className="text-center text-white/50">טוען…</p>
         )}
         {quizzes !== null && quizzes.length === 0 && (
-          <p className="text-center text-zinc-500">
-            אין עדיין חידונים. לחצי "חידון חדש" כדי להתחיל.
+          <p className="text-center text-white/50 glass rounded-2xl p-8">
+            עדיין אין חידונים. לחצי "חידון חדש" כדי להתחיל.
           </p>
         )}
         {quizzes?.map((q) => (
           <div
             key={q.id}
-            className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-6 py-4"
+            className="flex items-center justify-between gap-3 glass glass-hover rounded-2xl px-6 py-4"
           >
             <Link
               href={`/admin/${q.id}`}
-              className="flex-1 text-xl font-semibold hover:text-indigo-600"
+              className="flex-1 text-xl font-semibold text-white"
             >
               {q.title}
             </Link>
             <button
               onClick={() => deleteQuiz(q.id)}
-              className="text-sm text-rose-600 hover:text-rose-500"
+              className="text-sm text-rose-300 hover:text-rose-200"
               aria-label="מחיקה"
             >
               מחיקה
@@ -101,7 +107,7 @@ export default function AdminIndexPage() {
         ))}
       </div>
 
-      <Link href="/" className="mt-4 text-indigo-600 hover:underline">
+      <Link href="/" className="mt-2 text-sm text-white/50 hover:text-white">
         חזרה לדף הבית
       </Link>
     </main>

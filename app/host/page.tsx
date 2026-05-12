@@ -40,10 +40,9 @@ export default function HostIndexPage() {
         .select()
         .single();
       if (!error && data) {
-        router.push(`/host/${data.id}`);
+        router.push(`/host/${(data as { id: string }).id}`);
         return;
       }
-      // 23505 = unique_violation on join_code; retry with a new code
       if (error?.code !== "23505") {
         setError("שגיאה ביצירת המשחק: " + (error?.message ?? "לא ידוע"));
         setStarting(false);
@@ -55,39 +54,44 @@ export default function HostIndexPage() {
   }
 
   return (
-    <main className="flex flex-1 flex-col items-center gap-8 p-8 bg-zinc-50 dark:bg-black">
-      <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
-        ממשק מנחה
-      </h1>
-      <p className="text-zinc-600 dark:text-zinc-400">
-        בחרי חידון להתחלת משחק חדש
-      </p>
+    <main className="flex flex-1 flex-col items-center gap-10 p-8">
+      <header className="text-center">
+        <h1 className="text-4xl sm:text-5xl font-bold gradient-text">
+          ממשק הנחיה
+        </h1>
+        <p className="mt-3 text-white/60">בחרי חידון להתחלת משחק חדש</p>
+      </header>
 
       <div className="grid w-full max-w-2xl gap-3">
         {quizzes === null && (
-          <p className="text-center text-zinc-500">טוען חידונים…</p>
+          <p className="text-center text-white/50">טוען…</p>
         )}
         {quizzes !== null && quizzes.length === 0 && (
-          <p className="text-center text-zinc-500">
-            אין עדיין חידונים. ניצור אחד דרך /admin (ייבנה בשלב 6).
-          </p>
+          <div className="glass rounded-2xl p-8 text-center text-white/60">
+            עדיין אין חידונים.{" "}
+            <Link href="/admin" className="text-white underline hover:no-underline">
+              ליצירת חידון
+            </Link>
+          </div>
         )}
         {quizzes?.map((q) => (
           <button
             key={q.id}
             disabled={starting}
             onClick={() => startGame(q.id)}
-            className="rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-6 py-4 text-right hover:border-emerald-500 disabled:opacity-50"
+            className="glass glass-hover rounded-2xl px-6 py-5 text-right disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <div className="text-xl font-semibold">{q.title}</div>
-            <div className="mt-1 text-sm text-zinc-500">לחצי להתחלת משחק חדש</div>
+            <div className="text-xl font-semibold text-white">{q.title}</div>
+            <div className="mt-1 text-sm text-white/50">
+              לחצי להתחלת משחק חדש ←
+            </div>
           </button>
         ))}
       </div>
 
-      {error && <p className="text-rose-600">{error}</p>}
+      {error && <p className="text-rose-400">{error}</p>}
 
-      <Link href="/" className="mt-4 text-emerald-600 hover:underline">
+      <Link href="/" className="mt-2 text-sm text-white/50 hover:text-white">
         חזרה לדף הבית
       </Link>
     </main>

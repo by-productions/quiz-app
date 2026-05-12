@@ -5,43 +5,49 @@ const routes = [
     href: "/admin",
     title: "יצירה",
     subtitle: "בנייה ועיצוב של חידונים",
-    accent: "bg-indigo-600 hover:bg-indigo-500",
+    accent: "from-violet-500 to-fuchsia-600",
   },
   {
     href: "/host",
-    title: "מנחה",
-    subtitle: "מסך גדול — שליטה בקצב המשחק",
-    accent: "bg-emerald-600 hover:bg-emerald-500",
+    title: "הנחיה",
+    subtitle: "מסך גדול — שליטה במשחק",
+    accent: "from-emerald-400 to-teal-600",
   },
   {
     href: "/play",
     title: "השתתפות",
-    subtitle: "כניסה למשחק עם קוד",
-    accent: "bg-rose-600 hover:bg-rose-500",
+    subtitle: "כניסה עם קוד",
+    accent: "from-rose-500 to-pink-600",
   },
 ];
 
 export default function Home() {
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-12 p-8 bg-zinc-50 dark:bg-black">
+    <main className="flex flex-1 flex-col items-center justify-center gap-14 p-8">
       <header className="text-center">
-        <h1 className="text-4xl sm:text-5xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+        <h1 className="text-5xl sm:text-7xl font-bold tracking-tight gradient-text leading-tight">
           חידון אינטראקטיבי
         </h1>
-        <p className="mt-3 text-lg text-zinc-600 dark:text-zinc-400">
-          בחרי את הממשק שאליו את רוצה להיכנס
+        <p className="mt-4 text-lg sm:text-xl text-white/60">
+          חוויית חידון בזמן אמת לכנסים ואירועים
         </p>
       </header>
 
-      <div className="grid w-full max-w-4xl gap-6 sm:grid-cols-3">
+      <div className="grid w-full max-w-4xl gap-5 sm:grid-cols-3">
         {routes.map((r) => (
           <Link
             key={r.href}
             href={r.href}
-            className={`${r.accent} flex flex-col items-center justify-center rounded-2xl p-8 text-white shadow-lg transition-colors`}
+            className="group glass glass-hover rounded-3xl p-7 transition-transform hover:-translate-y-1"
           >
-            <span className="text-2xl font-semibold">{r.title}</span>
-            <span className="mt-2 text-sm opacity-90">{r.subtitle}</span>
+            <div
+              className={`h-1.5 w-12 rounded-full bg-gradient-to-r ${r.accent}`}
+            />
+            <div className="mt-5 text-3xl font-bold text-white">{r.title}</div>
+            <div className="mt-2 text-sm text-white/55">{r.subtitle}</div>
+            <div className="mt-6 text-xs text-white/40 group-hover:text-white/70 transition-colors">
+              כניסה ←
+            </div>
           </Link>
         ))}
       </div>
