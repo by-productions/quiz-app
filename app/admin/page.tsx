@@ -12,18 +12,18 @@ export default function AdminPage() {
 
   useEffect(() => {
     const supabase = createClient();
-    supabase
-      .from("quizzes")
-      .select("id", { count: "exact", head: true })
-      .then(({ count, error }) => {
-        if (error) {
-          setStatus("error");
-          setInfo(error.message);
-        } else {
-          setStatus("ok");
-          setInfo(`${count ?? 0} חידונים בדאטהבייס`);
-        }
-      });
+    (async () => {
+      const { count, error } = await supabase
+        .from("quizzes")
+        .select("id", { count: "exact", head: true });
+      if (error) {
+        setStatus("error");
+        setInfo(error.message);
+      } else {
+        setStatus("ok");
+        setInfo(`${count ?? 0} חידונים בדאטהבייס`);
+      }
+    })();
   }, []);
 
   return (
