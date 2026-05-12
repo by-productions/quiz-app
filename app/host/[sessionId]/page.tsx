@@ -490,14 +490,158 @@ export default function HostSessionPage() {
               <WordCloudView entries={aggregateWords(responses)} />
             )}
 
-            {session.state === "question_active" && (
-              <button
-                onClick={showResults}
-                className="gradient-bg brand-glow rounded-full px-10 py-4 text-lg font-bold text-white hover:scale-105 transition-transform"
-              >
-                סיימי שאלה והצג תוצאות
-              </button>
+            {currentQuestion.type === "true_false" && (
+              <div className="grid w-full max-w-3xl grid-cols-2 gap-4">
+                {currentQuestion.answer_options.map((opt) => {
+                  const isTrue = opt.text === "נכון";
+                  const count = responseCounts[opt.id] ?? 0;
+                  const totalVotes = Object.values(responseCounts).reduce(
+                    (a, b) => a + b,
+                    0,
+                  );
+                  const pct =
+                    totalVotes > 0
+                      ? Math.round((count / totalVotes) * 100)
+                      : 0;
+                  const isResults = session.state === "showing_results";
+                  const correct = opt.is_correct;
+                  const gradient = isTrue
+                    ? "from-emerald-500 to-teal-600"
+                    : "from-rose-500 to-red-600";
+                  const hex = isTrue ? "#10b981" : "#e11d48";
+                  return (
+                    <div
+                      key={opt.id}
+                      className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${gradient} p-8 ${
+                        isResults && !correct ? "opacity-50" : ""
+                      } ${
+                        isResults && correct
+                          ? "ring-4 ring-white/80 ring-offset-4 ring-offset-transparent"
+                          : ""
+                      }`}
+                      style={{ boxShadow: `0 12px 40px -8px ${hex}66` }}
+                    >
+                      <div className="flex items-center justify-center text-6xl sm:text-7xl mb-3 text-white">
+                        {isTrue ? "✓" : "✗"}
+                      </div>
+                      <div className="text-center text-2xl sm:text-3xl font-bold text-white">
+                        {opt.text}
+                      </div>
+                      <div className="mt-4 text-center text-4xl sm:text-5xl font-extrabold text-white tabular-nums">
+                        {count}
+                      </div>
+                      {isResults && (
+                        <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-white/20">
+                          <div
+                            className="h-full bg-white/95"
+                            style={{ width: `${pct}%` }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             )}
+
+            {currentQuestion.type === "rating" && (() => {
+              const ratings = responses
+                .map((r) => (r.answer_data as { rating?: number }).rating)
+                .filter((n): n is number => typeof n === "number");
+              const total = ratings.length;
+              const avg =
+                total > 0
+                  ? ratings.reduce((a, b) => a + b, 0) / total
+                  : 0;
+              const distribution = [1, 2, 3, 4, 5].map((score) => ({
+                score,
+                count: ratings.filter((r) => r === score).length,
+              }));
+              const max = Math.max(1, ...distribution.map((d) => d.count));
+              if (session.state === "question_active") {
+                return (
+                  <div className="glass-strong rounded-3xl px-10 py-8 text-center">
+                    <p className="text-xs uppercase tracking-wider text-white/50">
+                      דירוגים שהתקבלו
+                    </p>
+                    <p
+                      className="mt-2 font-extrabold gradient-text tabular-nums"
+                      style={{
+                        fontSize: "clamp(3.5rem, 10vw, 7rem)",
+                        lineHeight: 1,
+                      }}
+                    >
+                      {total}
+                    </p>
+                  </div>
+                );
+              }
+              return (
+                <div className="w-full max-w-2xl glass rounded-3xl p-6 flex flex-col gap-4">
+                  <div className="flex items-baseline justify-center gap-3">
+                    <span
+                      className="font-extrabold gradient-text tabular-nums"
+                      style={{
+                        fontSize: "clamp(2.5rem, 8vw, 5rem)",
+                        lineHeight: 1,
+                      }}
+                    >
+                      {avg.toFixed(1)}
+                    </span>
+                    <span className="text-white/50">/ 5</span>
+                    <span className="text-white/40 text-sm">
+                      ({total} דירוגים)
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {distribution.map((d) => (
+                      <div
+                        key={d.score}
+                        className="flex items-center gap-3"
+                      >
+                        <span className="w-6 text-center text-white/70 font-bold">
+                          {d.score}
+                        </span>
+                        <div className="flex-1 h-3 rounded-full bg-white/10 overflow-hidden">
+                          <div
+                            className="h-full gradient-bg"
+                            style={{ width: `${(d.count / max) * 100}%` }}
+                          />
+                        </div>
+                        <span className="w-10 text-left text-white/60 text-sm tabular-nums">
+                          {d.count}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+
+            {currentQuestion.type === "slide" && (
+              <div className="text-center text-white/50 text-sm">
+                שקופית מידע
+              </div>
+            )}
+
+            {session.state === "question_active" &&
+              currentQuestion.type === "slide" && (
+                <button
+                  onClick={nextQuestion}
+                  className="gradient-bg brand-glow rounded-full px-10 py-4 text-lg font-bold text-white hover:scale-105 transition-transform"
+                >
+                  {isLastQuestion ? "סיימי משחק" : "המשך →"}
+                </button>
+              )}
+            {session.state === "question_active" &&
+              currentQuestion.type !== "slide" && (
+                <button
+                  onClick={showResults}
+                  className="gradient-bg brand-glow rounded-full px-10 py-4 text-lg font-bold text-white hover:scale-105 transition-transform"
+                >
+                  סיימי שאלה והצג תוצאות
+                </button>
+              )}
             {session.state === "showing_results" && (
               <button
                 onClick={nextQuestion}

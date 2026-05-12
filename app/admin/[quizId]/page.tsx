@@ -200,6 +200,7 @@ export default function QuizEditorPage() {
   }
 
   async function changeQuestionType(qid: string, type: QuestionType) {
+    const before = questions.find((qq) => qq.id === qid);
     setQuestions((prev) =>
       prev.map((q) => (q.id === qid ? { ...q, type } : q)),
     );
@@ -207,7 +208,53 @@ export default function QuizEditorPage() {
       .from("questions")
       .update({ type })
       .eq("id", qid);
-    if (e) setError("שינוי סוג שאלה נכשל: " + e.message);
+    if (e) {
+      setError("שינוי סוג שאלה נכשל: " + e.message);
+      return;
+    }
+
+    // True/False auto-management: ensure exactly two options "נכון"/"לא נכון"
+    if (type === "true_false" && before) {
+      const wantTexts = ["נכון", "לא נכון"];
+      const haveTexts = before.answer_options.map((o) => o.text);
+      const matches =
+        haveTexts.length === 2 &&
+        haveTexts[0] === wantTexts[0] &&
+        haveTexts[1] === wantTexts[1];
+      if (!matches) {
+        await supabase
+          .from("answer_options")
+          .delete()
+          .eq("question_id", qid);
+        const { data: opts } = await supabase
+          .from("answer_options")
+          .insert([
+            {
+              question_id: qid,
+              text: "נכון",
+              position: 0,
+              is_correct: true,
+            },
+            {
+              question_id: qid,
+              text: "לא נכון",
+              position: 1,
+              is_correct: false,
+            },
+          ])
+          .select();
+        setQuestions((prev) =>
+          prev.map((qq) =>
+            qq.id === qid
+              ? {
+                  ...qq,
+                  answer_options: (opts ?? []) as AnswerOption[],
+                }
+              : qq,
+          ),
+        );
+      }
+    }
   }
 
   async function addOption(qid: string) {
@@ -454,8 +501,11 @@ export default function QuizEditorPage() {
               {(
                 [
                   { value: "multiple_choice", label: "רב-ברירה" },
+                  { value: "true_false", label: "נכון / לא נכון" },
+                  { value: "rating", label: "דירוג 1-5" },
                   { value: "free_response", label: "תגובה חופשית" },
                   { value: "word_cloud", label: "ענן מילים" },
+                  { value: "slide", label: "שקופית מידע" },
                 ] as const
               ).map((option) => (
                 <label
@@ -550,6 +600,51 @@ export default function QuizEditorPage() {
                   + הוספת אפשרות
                 </button>
               </div>
+            )}
+
+            {q.type === "true_false" && (
+              <div className="mt-4 flex flex-col gap-3">
+                <h4 className="text-xs uppercase tracking-wider text-white/40">
+                  תשובה נכונה
+                </h4>
+                <div className="flex gap-2">
+                  {q.answer_options.map((opt) => (
+                    <label
+                      key={opt.id}
+                      className={`flex-1 cursor-pointer rounded-2xl border-2 px-4 py-3 text-center font-semibold transition-colors ${
+                        opt.is_correct
+                          ? opt.text === "נכון"
+                            ? "border-emerald-500 bg-emerald-500/15 text-white"
+                            : "border-rose-500 bg-rose-500/15 text-white"
+                          : "border-white/10 text-white/60 hover:text-white"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name={`correct-${q.id}`}
+                        checked={opt.is_correct}
+                        onChange={() => setCorrectOption(q.id, opt.id)}
+                        className="sr-only"
+                      />
+                      {opt.text === "נכון" ? "✓ נכון" : "✗ לא נכון"}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {q.type === "rating" && (
+              <p className="mt-4 text-sm text-white/50">
+                המשתתפים ידרגו בסולם 1–5. במסך הראשי יוצגו ממוצע ופיזור
+                התשובות.
+              </p>
+            )}
+
+            {q.type === "slide" && (
+              <p className="mt-4 text-sm text-white/50">
+                שקופית מידע — אין הצבעה. השאלה תוצג למסכים והמנחה ממשיכה
+                ידנית לשאלה הבאה.
+              </p>
             )}
 
             {q.type === "free_response" && (

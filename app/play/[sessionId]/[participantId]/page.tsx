@@ -13,7 +13,9 @@ import type {
 import { getOptionStyle, OptionShape } from "@/lib/optionStyle";
 import { designStyle } from "@/lib/design";
 
-type MyResponse = { option_id?: string; text?: string } | null;
+type MyResponse =
+  | { option_id?: string; text?: string; rating?: number }
+  | null;
 
 export default function PlaySessionPage() {
   const { sessionId, participantId } = useParams<{
@@ -156,6 +158,21 @@ export default function PlaySessionPage() {
     setSubmitting(false);
   }
 
+  async function submitRating(rating: number) {
+    if (myResponse || !session?.current_question_id) return;
+    setMyResponse({ rating });
+    const { error: err } = await supabase.from("responses").insert({
+      session_id: sessionId,
+      participant_id: participantId,
+      question_id: session.current_question_id,
+      answer_data: { rating },
+    });
+    if (err) {
+      setMyResponse(null);
+      setError("שגיאה בדירוג: " + err.message);
+    }
+  }
+
   if (error) {
     return (
       <main className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
@@ -255,6 +272,83 @@ export default function PlaySessionPage() {
                 );
               })}
             </div>
+          )}
+
+          {question.type === "true_false" && (
+            <div className="grid w-full grid-cols-2 gap-3">
+              {options.map((opt) => {
+                const isTrue = opt.text === "נכון";
+                const isSelected = myResponse?.option_id === opt.id;
+                const disabled = !!myResponse;
+                const gradient = isTrue
+                  ? "from-emerald-500 to-teal-600"
+                  : "from-rose-500 to-red-600";
+                const hex = isTrue ? "#10b981" : "#e11d48";
+                return (
+                  <button
+                    key={opt.id}
+                    onClick={() => voteMC(opt.id)}
+                    disabled={disabled}
+                    className={`overflow-hidden rounded-3xl bg-gradient-to-br ${gradient} px-4 py-8 transition-all ${
+                      isSelected
+                        ? "ring-4 ring-white scale-[1.03]"
+                        : disabled
+                        ? "opacity-40"
+                        : "active:scale-95"
+                    }`}
+                    style={{
+                      boxShadow: isSelected
+                        ? `0 10px 40px -5px ${hex}aa`
+                        : `0 6px 20px -8px ${hex}66`,
+                    }}
+                  >
+                    <div className="text-5xl text-center mb-1 text-white">
+                      {isTrue ? "✓" : "✗"}
+                    </div>
+                    <div className="text-center text-lg font-bold text-white">
+                      {opt.text}
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {question.type === "rating" && (
+            <div className="w-full flex flex-col items-center gap-4">
+              {myResponse?.rating ? (
+                <div className="glass-strong rounded-3xl px-8 py-6 text-center">
+                  <div className="text-xs uppercase tracking-wider text-white/50 mb-2">
+                    הדירוג שלך
+                  </div>
+                  <div
+                    className="font-extrabold gradient-text tabular-nums"
+                    style={{ fontSize: "5rem", lineHeight: 1 }}
+                  >
+                    {myResponse.rating}
+                  </div>
+                  <div className="text-white/50 text-sm">מתוך 5</div>
+                </div>
+              ) : (
+                <div className="flex gap-3 justify-center flex-wrap">
+                  {[1, 2, 3, 4, 5].map((score) => (
+                    <button
+                      key={score}
+                      onClick={() => submitRating(score)}
+                      className="h-16 w-16 sm:h-20 sm:w-20 rounded-2xl gradient-bg brand-glow flex items-center justify-center text-3xl sm:text-4xl font-extrabold text-white hover:scale-110 transition-transform"
+                    >
+                      {score}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {question.type === "slide" && (
+            <p className="text-sm text-white/60 text-center">
+              ⏳ ממתינים שהמנחה תמשיך…
+            </p>
           )}
 
           {(question.type === "free_response" ||

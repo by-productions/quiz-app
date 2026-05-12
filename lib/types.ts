@@ -1,5 +1,8 @@
 export type QuestionType =
   | "multiple_choice"
+  | "true_false"
+  | "rating"
+  | "slide"
   | "free_response"
   | "word_cloud"
   | "poll"
