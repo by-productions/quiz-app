@@ -13,6 +13,11 @@ import type {
 
 type FullQuestion = Question & { answer_options: AnswerOption[] };
 
+type ResponseRow = {
+  answer_data: { option_id?: string; text?: string };
+  nickname: string;
+};
+
 export default function HostSessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const supabase = useMemo(() => createClient(), []);
@@ -20,12 +25,11 @@ export default function HostSessionPage() {
   const [session, setSession] = useState<GameSession | null>(null);
   const [questions, setQuestions] = useState<FullQuestion[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
-  const [responseCounts, setResponseCounts] = useState<Record<string, number>>(
-    {},
-  );
+  const [responses, setResponses] = useState<ResponseRow[]>([]);
+  const [responseTick, setResponseTick] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
-  // Initial load: session + questions + participants
+  // Initial load
   useEffect(() => {
     if (!sessionId) return;
     let cancelled = false;
@@ -63,7 +67,7 @@ export default function HostSessionPage() {
     };
   }, [sessionId, supabase]);
 
-  // Realtime: session updates, new participants, new responses
+  // Realtime
   useEffect(() => {
     if (!sessionId) return;
     const channel = supabase
@@ -97,15 +101,7 @@ export default function HostSessionPage() {
           table: "responses",
           filter: `session_id=eq.${sessionId}`,
         },
-        (payload: { new: { answer_data?: { option_id?: string } } }) => {
-          const optId = payload.new.answer_data?.option_id;
-          if (optId) {
-            setResponseCounts((prev) => ({
-              ...prev,
-              [optId]: (prev[optId] ?? 0) + 1,
-            }));
-          }
-        },
+        () => setResponseTick((t) => t + 1),
       )
       .subscribe();
     return () => {
@@ -113,33 +109,54 @@ export default function HostSessionPage() {
     };
   }, [sessionId, supabase]);
 
-  // Refresh response counts whenever the current question changes
+  // Fetch responses for current question (refetched on tick / question change)
   useEffect(() => {
     const qid = session?.current_question_id;
     if (!qid) {
-      setResponseCounts({});
+      setResponses([]);
       return;
     }
     let cancelled = false;
     (async () => {
       const { data } = await supabase
         .from("responses")
-        .select("answer_data")
+        .select("answer_data, participants(nickname)")
         .eq("session_id", sessionId)
         .eq("question_id", qid);
       if (cancelled) return;
-      const counts: Record<string, number> = {};
-      for (const r of data ?? []) {
-        const optId = (r as { answer_data?: { option_id?: string } })
-          .answer_data?.option_id;
-        if (optId) counts[optId] = (counts[optId] ?? 0) + 1;
-      }
-      setResponseCounts(counts);
+      const rows = (
+        (data ?? []) as Array<{
+          answer_data: { option_id?: string; text?: string };
+          participants: { nickname: string } | null;
+        }>
+      ).map((r) => ({
+        answer_data: r.answer_data,
+        nickname: r.participants?.nickname ?? "אנונימי",
+      }));
+      setResponses(rows);
     })();
     return () => {
       cancelled = true;
     };
-  }, [session?.current_question_id, sessionId, supabase]);
+  }, [session?.current_question_id, responseTick, sessionId, supabase]);
+
+  const currentQuestion = questions.find(
+    (q) => q.id === session?.current_question_id,
+  );
+
+  // Derived: MC counts
+  const responseCounts: Record<string, number> = {};
+  for (const r of responses) {
+    if (r.answer_data.option_id) {
+      responseCounts[r.answer_data.option_id] =
+        (responseCounts[r.answer_data.option_id] ?? 0) + 1;
+    }
+  }
+
+  // Derived: free responses
+  const freeResponses = responses
+    .filter((r) => typeof r.answer_data.text === "string")
+    .map((r) => ({ text: r.answer_data.text as string, nickname: r.nickname }));
 
   async function startFirstQuestion() {
     const first = questions[0];
@@ -155,6 +172,23 @@ export default function HostSessionPage() {
       .from("game_sessions")
       .update({ state: "showing_results" })
       .eq("id", sessionId);
+  }
+
+  async function nextQuestion() {
+    if (!currentQuestion) return;
+    const idx = questions.findIndex((q) => q.id === currentQuestion.id);
+    const next = questions[idx + 1];
+    if (next) {
+      await supabase
+        .from("game_sessions")
+        .update({
+          state: "question_active",
+          current_question_id: next.id,
+        })
+        .eq("id", sessionId);
+    } else {
+      await endGame();
+    }
   }
 
   async function endGame() {
@@ -183,9 +217,10 @@ export default function HostSessionPage() {
     );
   }
 
-  const currentQuestion = questions.find(
-    (q) => q.id === session.current_question_id,
-  );
+  const isLastQuestion = currentQuestion
+    ? questions.findIndex((q) => q.id === currentQuestion.id) ===
+      questions.length - 1
+    : false;
 
   return (
     <main className="flex flex-1 flex-col items-center gap-8 p-8 bg-zinc-50 dark:bg-black">
@@ -237,19 +272,32 @@ export default function HostSessionPage() {
           <h2 className="text-3xl font-bold text-center">
             {currentQuestion.question_text}
           </h2>
-          <div className="grid w-full max-w-2xl gap-3 sm:grid-cols-2">
-            {currentQuestion.answer_options.map((opt) => (
-              <div
-                key={opt.id}
-                className="rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 p-4"
-              >
-                <div className="text-lg">{opt.text}</div>
-                <div className="text-3xl font-bold mt-2 text-emerald-600">
-                  {responseCounts[opt.id] ?? 0}
+
+          {currentQuestion.type === "multiple_choice" && (
+            <div className="grid w-full max-w-2xl gap-3 sm:grid-cols-2">
+              {currentQuestion.answer_options.map((opt) => (
+                <div
+                  key={opt.id}
+                  className="rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 p-4"
+                >
+                  <div className="text-lg">{opt.text}</div>
+                  <div className="text-3xl font-bold mt-2 text-emerald-600">
+                    {responseCounts[opt.id] ?? 0}
+                  </div>
                 </div>
+              ))}
+            </div>
+          )}
+
+          {currentQuestion.type === "free_response" && (
+            <div className="rounded-2xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 px-8 py-6 text-center">
+              <div className="text-sm text-zinc-500">תגובות שהתקבלו</div>
+              <div className="mt-1 text-5xl font-bold text-emerald-600">
+                {freeResponses.length}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
+
           <button
             onClick={showResults}
             className="rounded-full bg-amber-600 px-8 py-3 text-lg font-semibold text-white hover:bg-amber-500"
@@ -264,30 +312,56 @@ export default function HostSessionPage() {
           <h2 className="text-2xl font-bold text-center">
             תוצאות: {currentQuestion.question_text}
           </h2>
-          <div className="grid w-full max-w-2xl gap-3 sm:grid-cols-2">
-            {currentQuestion.answer_options.map((opt) => (
-              <div
-                key={opt.id}
-                className={`rounded-2xl border-2 p-4 ${
-                  opt.is_correct
-                    ? "bg-emerald-50 dark:bg-emerald-950 border-emerald-500"
-                    : "bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
-                }`}
-              >
-                <div className="text-lg">
-                  {opt.text} {opt.is_correct && "✓"}
+
+          {currentQuestion.type === "multiple_choice" && (
+            <div className="grid w-full max-w-2xl gap-3 sm:grid-cols-2">
+              {currentQuestion.answer_options.map((opt) => (
+                <div
+                  key={opt.id}
+                  className={`rounded-2xl border-2 p-4 ${
+                    opt.is_correct
+                      ? "bg-emerald-50 dark:bg-emerald-950 border-emerald-500"
+                      : "bg-white dark:bg-zinc-950 border-zinc-200 dark:border-zinc-800"
+                  }`}
+                >
+                  <div className="text-lg">
+                    {opt.text} {opt.is_correct && "✓"}
+                  </div>
+                  <div className="text-3xl font-bold mt-2">
+                    {responseCounts[opt.id] ?? 0}
+                  </div>
                 </div>
-                <div className="text-3xl font-bold mt-2">
-                  {responseCounts[opt.id] ?? 0}
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
+
+          {currentQuestion.type === "free_response" && (
+            <div className="w-full max-w-2xl rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 p-4">
+              {freeResponses.length === 0 ? (
+                <p className="text-zinc-500 text-center">לא התקבלו תגובות</p>
+              ) : (
+                <ul className="space-y-2">
+                  {freeResponses.map((r, i) => (
+                    <li
+                      key={i}
+                      className="rounded-xl bg-zinc-50 dark:bg-zinc-900 px-3 py-2"
+                    >
+                      <span className="font-semibold text-indigo-600">
+                        {r.nickname}:
+                      </span>{" "}
+                      <span>{r.text}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
           <button
-            onClick={endGame}
-            className="rounded-full bg-rose-600 px-8 py-3 text-lg font-semibold text-white hover:bg-rose-500"
+            onClick={nextQuestion}
+            className="rounded-full bg-emerald-600 px-8 py-3 text-lg font-semibold text-white hover:bg-emerald-500"
           >
-            סיימי משחק
+            {isLastQuestion ? "סיימי משחק" : "שאלה הבאה"}
           </button>
         </>
       )}

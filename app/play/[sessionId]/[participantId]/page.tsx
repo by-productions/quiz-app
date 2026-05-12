@@ -6,6 +6,8 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import type { GameSession, Question, AnswerOption } from "@/lib/types";
 
+type MyResponse = { option_id?: string; text?: string } | null;
+
 export default function PlaySessionPage() {
   const { sessionId, participantId } = useParams<{
     sessionId: string;
@@ -16,10 +18,11 @@ export default function PlaySessionPage() {
   const [session, setSession] = useState<GameSession | null>(null);
   const [question, setQuestion] = useState<Question | null>(null);
   const [options, setOptions] = useState<AnswerOption[]>([]);
-  const [votedOptionId, setVotedOptionId] = useState<string | null>(null);
+  const [myResponse, setMyResponse] = useState<MyResponse>(null);
+  const [freeText, setFreeText] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Load initial session
   useEffect(() => {
     if (!sessionId) return;
     let cancelled = false;
@@ -41,7 +44,6 @@ export default function PlaySessionPage() {
     };
   }, [sessionId, supabase]);
 
-  // Realtime: session updates
   useEffect(() => {
     if (!sessionId) return;
     const channel = supabase
@@ -62,13 +64,13 @@ export default function PlaySessionPage() {
     };
   }, [sessionId, supabase]);
 
-  // When the current question changes: fetch it, its options, and any prior vote
   useEffect(() => {
     const qid = session?.current_question_id;
     if (!qid) {
       setQuestion(null);
       setOptions([]);
-      setVotedOptionId(null);
+      setMyResponse(null);
+      setFreeText("");
       return;
     }
     let cancelled = false;
@@ -91,18 +93,20 @@ export default function PlaySessionPage() {
       if (cancelled) return;
       setQuestion((questionRes.data as Question) ?? null);
       setOptions((optionsRes.data ?? []) as AnswerOption[]);
-      const prior = (existingRes.data as { answer_data?: { option_id?: string } } | null)
-        ?.answer_data?.option_id;
-      setVotedOptionId(prior ?? null);
+      const prior =
+        (existingRes.data as { answer_data?: MyResponse } | null)?.answer_data ??
+        null;
+      setMyResponse(prior);
+      setFreeText("");
     })();
     return () => {
       cancelled = true;
     };
   }, [session?.current_question_id, sessionId, participantId, supabase]);
 
-  async function vote(optionId: string) {
-    if (votedOptionId || !session?.current_question_id) return;
-    setVotedOptionId(optionId); // optimistic
+  async function voteMC(optionId: string) {
+    if (myResponse || !session?.current_question_id) return;
+    setMyResponse({ option_id: optionId });
     const { error: err } = await supabase.from("responses").insert({
       session_id: sessionId,
       participant_id: participantId,
@@ -110,9 +114,27 @@ export default function PlaySessionPage() {
       answer_data: { option_id: optionId },
     });
     if (err) {
-      setVotedOptionId(null);
+      setMyResponse(null);
       setError("שגיאה בהצבעה: " + err.message);
     }
+  }
+
+  async function submitFreeText() {
+    const text = freeText.trim();
+    if (!text || myResponse || !session?.current_question_id) return;
+    setSubmitting(true);
+    setMyResponse({ text });
+    const { error: err } = await supabase.from("responses").insert({
+      session_id: sessionId,
+      participant_id: participantId,
+      question_id: session.current_question_id,
+      answer_data: { text },
+    });
+    if (err) {
+      setMyResponse(null);
+      setError("שגיאה בשליחה: " + err.message);
+    }
+    setSubmitting(false);
   }
 
   if (error) {
@@ -147,26 +169,58 @@ export default function PlaySessionPage() {
           <h2 className="text-2xl font-bold text-center">
             {question.question_text}
           </h2>
-          <div className="grid w-full max-w-md gap-3">
-            {options.map((opt) => {
-              const isSelected = votedOptionId === opt.id;
-              return (
-                <button
-                  key={opt.id}
-                  onClick={() => vote(opt.id)}
-                  disabled={!!votedOptionId}
-                  className={`rounded-2xl border-2 px-6 py-4 text-lg font-semibold transition-colors ${
-                    isSelected
-                      ? "border-rose-500 bg-rose-50 dark:bg-rose-950"
-                      : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 hover:border-rose-300"
-                  } disabled:cursor-not-allowed disabled:opacity-60`}
-                >
-                  {opt.text}
-                </button>
-              );
-            })}
-          </div>
-          {votedOptionId && (
+
+          {question.type === "multiple_choice" && (
+            <div className="grid w-full max-w-md gap-3">
+              {options.map((opt) => {
+                const isSelected = myResponse?.option_id === opt.id;
+                return (
+                  <button
+                    key={opt.id}
+                    onClick={() => voteMC(opt.id)}
+                    disabled={!!myResponse}
+                    className={`rounded-2xl border-2 px-6 py-4 text-lg font-semibold transition-colors ${
+                      isSelected
+                        ? "border-rose-500 bg-rose-50 dark:bg-rose-950"
+                        : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 hover:border-rose-300"
+                    } disabled:cursor-not-allowed disabled:opacity-60`}
+                  >
+                    {opt.text}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+
+          {question.type === "free_response" && (
+            <>
+              {myResponse?.text ? (
+                <div className="w-full max-w-md rounded-2xl border-2 border-rose-500 bg-rose-50 dark:bg-rose-950 px-4 py-3">
+                  <div className="text-xs text-zinc-500 mb-1">התגובה שלך:</div>
+                  <div className="text-lg">{myResponse.text}</div>
+                </div>
+              ) : (
+                <div className="w-full max-w-md flex flex-col gap-3">
+                  <textarea
+                    value={freeText}
+                    onChange={(e) => setFreeText(e.target.value)}
+                    placeholder="כתבי את התגובה שלך…"
+                    rows={4}
+                    className="rounded-2xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-950 px-4 py-3 focus:border-rose-500 focus:outline-none resize-none"
+                  />
+                  <button
+                    onClick={submitFreeText}
+                    disabled={submitting || !freeText.trim()}
+                    className="rounded-full bg-rose-600 px-6 py-3 font-semibold text-white hover:bg-rose-500 disabled:opacity-50"
+                  >
+                    {submitting ? "שולחת…" : "שלחי"}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+
+          {myResponse && (
             <p className="text-sm text-zinc-500">
               תשובתך נשלחה. ממתינים לאחרים…
             </p>

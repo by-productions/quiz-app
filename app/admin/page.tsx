@@ -1,49 +1,104 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import type { Quiz } from "@/lib/types";
 
-type Status = "checking" | "ok" | "error";
-
-export default function AdminPage() {
-  const [status, setStatus] = useState<Status>("checking");
-  const [info, setInfo] = useState<string>("");
+export default function AdminIndexPage() {
+  const router = useRouter();
+  const supabase = useMemo(() => createClient(), []);
+  const [quizzes, setQuizzes] = useState<Quiz[] | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const supabase = createClient();
+    let cancelled = false;
     (async () => {
-      const { count, error } = await supabase
+      const { data } = await supabase
         .from("quizzes")
-        .select("id", { count: "exact", head: true });
-      if (error) {
-        setStatus("error");
-        setInfo(error.message);
-      } else {
-        setStatus("ok");
-        setInfo(`${count ?? 0} חידונים בדאטהבייס`);
-      }
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (cancelled) return;
+      setQuizzes((data ?? []) as Quiz[]);
     })();
-  }, []);
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase]);
+
+  async function createQuiz() {
+    setCreating(true);
+    setError(null);
+    const { data, error: insertErr } = await supabase
+      .from("quizzes")
+      .insert({ title: "חידון חדש" })
+      .select()
+      .single();
+    if (insertErr || !data) {
+      setError("שגיאה: " + (insertErr?.message ?? "לא ידוע"));
+      setCreating(false);
+      return;
+    }
+    router.push(`/admin/${(data as Quiz).id}`);
+  }
+
+  async function deleteQuiz(id: string) {
+    if (!confirm("למחוק את החידון? לא ניתן לבטל.")) return;
+    const { error: delErr } = await supabase.from("quizzes").delete().eq("id", id);
+    if (delErr) {
+      setError("שגיאה במחיקה: " + delErr.message);
+      return;
+    }
+    setQuizzes((prev) => (prev ?? []).filter((q) => q.id !== id));
+  }
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-4 p-8 bg-zinc-50 dark:bg-black">
+    <main className="flex flex-1 flex-col items-center gap-8 p-8 bg-zinc-50 dark:bg-black">
       <h1 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
         ממשק יצירה
       </h1>
-      <p className="text-zinc-600 dark:text-zinc-400">
-        כאן תבני ותעצבי חידונים. (ייבנה בשלב 6)
-      </p>
 
-      <div className="mt-4 rounded-lg border border-zinc-200 dark:border-zinc-800 px-4 py-2 text-sm">
-        Supabase:{" "}
-        {status === "checking" && <span className="text-zinc-500">בודק חיבור…</span>}
-        {status === "ok" && (
-          <span className="text-emerald-600">✓ מחובר — {info}</span>
+      <button
+        onClick={createQuiz}
+        disabled={creating}
+        className="rounded-full bg-indigo-600 px-6 py-3 font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
+      >
+        {creating ? "יוצרת…" : "+ חידון חדש"}
+      </button>
+
+      {error && <p className="text-rose-600">{error}</p>}
+
+      <div className="grid w-full max-w-2xl gap-3">
+        {quizzes === null && (
+          <p className="text-center text-zinc-500">טוען חידונים…</p>
         )}
-        {status === "error" && (
-          <span className="text-rose-600">✗ שגיאה: {info}</span>
+        {quizzes !== null && quizzes.length === 0 && (
+          <p className="text-center text-zinc-500">
+            אין עדיין חידונים. לחצי "חידון חדש" כדי להתחיל.
+          </p>
         )}
+        {quizzes?.map((q) => (
+          <div
+            key={q.id}
+            className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-6 py-4"
+          >
+            <Link
+              href={`/admin/${q.id}`}
+              className="flex-1 text-xl font-semibold hover:text-indigo-600"
+            >
+              {q.title}
+            </Link>
+            <button
+              onClick={() => deleteQuiz(q.id)}
+              className="text-sm text-rose-600 hover:text-rose-500"
+              aria-label="מחיקה"
+            >
+              מחיקה
+            </button>
+          </div>
+        ))}
       </div>
 
       <Link href="/" className="mt-4 text-indigo-600 hover:underline">
