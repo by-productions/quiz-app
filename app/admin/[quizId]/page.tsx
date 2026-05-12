@@ -13,6 +13,7 @@ import type {
 } from "@/lib/types";
 import { getOptionStyle, OptionShape } from "@/lib/optionStyle";
 import { designStyle, DEFAULT_PRIMARY, DEFAULT_SECONDARY } from "@/lib/design";
+import { ImageUpload } from "@/lib/ImageUpload";
 
 type QuestionWithOptions = Question & { answer_options: AnswerOption[] };
 
@@ -161,6 +162,41 @@ export default function QuizEditorPage() {
       .update({ question_text })
       .eq("id", qid);
     if (e) setError("שמירת שאלה נכשלה: " + e.message);
+  }
+
+  async function saveQuestionImage(qid: string, image_url: string | null) {
+    setQuestions((prev) =>
+      prev.map((q) => (q.id === qid ? { ...q, image_url } : q)),
+    );
+    const { error: e } = await supabase
+      .from("questions")
+      .update({ image_url })
+      .eq("id", qid);
+    if (e) setError("שמירת תמונת שאלה נכשלה: " + e.message);
+  }
+
+  async function saveOptionImage(
+    qid: string,
+    oid: string,
+    image_url: string | null,
+  ) {
+    setQuestions((prev) =>
+      prev.map((qq) =>
+        qq.id === qid
+          ? {
+              ...qq,
+              answer_options: qq.answer_options.map((o) =>
+                o.id === oid ? { ...o, image_url } : o,
+              ),
+            }
+          : qq,
+      ),
+    );
+    const { error: e } = await supabase
+      .from("answer_options")
+      .update({ image_url })
+      .eq("id", oid);
+    if (e) setError("שמירת תמונת אפשרות נכשלה: " + e.message);
   }
 
   async function changeQuestionType(qid: string, type: QuestionType) {
@@ -406,6 +442,14 @@ export default function QuizEditorPage() {
               placeholder="טקסט השאלה"
             />
 
+            <div className="mt-3">
+              <ImageUpload
+                value={q.image_url}
+                onChange={(url) => saveQuestionImage(q.id, url)}
+                label="+ תמונה לשאלה"
+              />
+            </div>
+
             <div className="mt-4 flex flex-wrap gap-2 text-sm">
               {(
                 [
@@ -442,48 +486,60 @@ export default function QuizEditorPage() {
                 {q.answer_options.map((opt, oidx) => {
                   const style = getOptionStyle(oidx);
                   return (
-                    <div key={opt.id} className="flex items-center gap-2">
-                      <div
-                        className={`h-9 w-9 shrink-0 rounded-xl bg-gradient-to-br ${style.gradient} p-2`}
-                      >
-                        <OptionShape
-                          shape={style.shape}
-                          className="h-full w-full text-white"
+                    <div key={opt.id} className="flex flex-col gap-2">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`h-9 w-9 shrink-0 rounded-xl bg-gradient-to-br ${style.gradient} p-2`}
+                        >
+                          <OptionShape
+                            shape={style.shape}
+                            className="h-full w-full text-white"
+                          />
+                        </div>
+                        <input
+                          defaultValue={opt.text}
+                          onBlur={(e) =>
+                            saveOptionText(q.id, opt.id, e.target.value)
+                          }
+                          className="input-surface flex-1 rounded-xl px-3 py-2"
+                          placeholder={`אפשרות ${oidx + 1}`}
+                        />
+                        <label
+                          className="cursor-pointer flex items-center gap-1 text-xs text-white/60 hover:text-white"
+                          title="סמני כתשובה נכונה"
+                        >
+                          <input
+                            type="radio"
+                            name={`correct-${q.id}`}
+                            checked={opt.is_correct}
+                            onChange={() => setCorrectOption(q.id, opt.id)}
+                          />
+                          נכון
+                        </label>
+                        <button
+                          onClick={() => deleteOption(q.id, opt.id)}
+                          disabled={q.answer_options.length <= 2}
+                          className="text-rose-300 hover:text-rose-200 disabled:opacity-30 text-lg px-2"
+                          aria-label="מחיקת אפשרות"
+                          title={
+                            q.answer_options.length <= 2
+                              ? "צריך לפחות 2 אפשרויות"
+                              : "מחיקה"
+                          }
+                        >
+                          ×
+                        </button>
+                      </div>
+                      <div className="pr-11">
+                        <ImageUpload
+                          value={opt.image_url}
+                          onChange={(url) =>
+                            saveOptionImage(q.id, opt.id, url)
+                          }
+                          label="+ תמונה לאפשרות"
+                          previewClass="max-h-20"
                         />
                       </div>
-                      <input
-                        defaultValue={opt.text}
-                        onBlur={(e) =>
-                          saveOptionText(q.id, opt.id, e.target.value)
-                        }
-                        className="input-surface flex-1 rounded-xl px-3 py-2"
-                        placeholder={`אפשרות ${oidx + 1}`}
-                      />
-                      <label
-                        className="cursor-pointer flex items-center gap-1 text-xs text-white/60 hover:text-white"
-                        title="סמני כתשובה נכונה"
-                      >
-                        <input
-                          type="radio"
-                          name={`correct-${q.id}`}
-                          checked={opt.is_correct}
-                          onChange={() => setCorrectOption(q.id, opt.id)}
-                        />
-                        נכון
-                      </label>
-                      <button
-                        onClick={() => deleteOption(q.id, opt.id)}
-                        disabled={q.answer_options.length <= 2}
-                        className="text-rose-300 hover:text-rose-200 disabled:opacity-30 text-lg px-2"
-                        aria-label="מחיקת אפשרות"
-                        title={
-                          q.answer_options.length <= 2
-                            ? "צריך לפחות 2 אפשרויות"
-                            : "מחיקה"
-                        }
-                      >
-                        ×
-                      </button>
                     </div>
                   );
                 })}

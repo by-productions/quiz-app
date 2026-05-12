@@ -32,6 +32,7 @@ export type Question = {
   type: QuestionType;
   position: number;
   time_limit: number | null;
+  image_url: string | null;
   created_at: string;
 };
 
@@ -41,6 +42,7 @@ export type AnswerOption = {
   text: string;
   is_correct: boolean;
   position: number;
+  image_url: string | null;
   created_at: string;
 };
 

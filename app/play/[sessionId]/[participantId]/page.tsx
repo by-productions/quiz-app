@@ -195,6 +195,14 @@ export default function PlaySessionPage() {
 
       {session.state === "question_active" && question && (
         <div className="flex flex-col items-center gap-6 w-full max-w-md">
+          {question.image_url && (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={question.image_url}
+              alt=""
+              className="rounded-2xl max-h-48 w-auto object-contain"
+            />
+          )}
           <h2 className="text-2xl sm:text-3xl font-bold text-center text-white leading-tight">
             {question.question_text}
           </h2>
@@ -230,8 +238,17 @@ export default function PlaySessionPage() {
                           className="h-full w-full"
                         />
                       </div>
+                      {opt.image_url && (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={opt.image_url}
+                          alt=""
+                          className="h-12 w-12 rounded-lg object-cover shrink-0"
+                        />
+                      )}
                       <div className="flex-1 text-lg font-bold text-white drop-shadow">
-                        {opt.text || `אפשרות ${idx + 1}`}
+                        {opt.text ||
+                          (opt.image_url ? "" : `אפשרות ${idx + 1}`)}
                       </div>
                     </div>
                   </button>

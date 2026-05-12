@@ -358,6 +358,15 @@ export default function HostSessionPage() {
               </span>
             </div>
 
+            {currentQuestion.image_url && (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img
+                src={currentQuestion.image_url}
+                alt=""
+                className="rounded-3xl max-h-[40vh] w-auto object-contain shadow-xl"
+              />
+            )}
+
             <h2
               className="text-center font-bold text-white leading-tight"
               style={{ fontSize: "clamp(1.75rem, 4.5vw, 3.5rem)" }}
@@ -401,8 +410,16 @@ export default function HostSessionPage() {
                             className="h-full w-full"
                           />
                         </div>
+                        {opt.image_url && (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img
+                            src={opt.image_url}
+                            alt=""
+                            className="h-16 w-16 sm:h-20 sm:w-20 rounded-xl object-cover shrink-0"
+                          />
+                        )}
                         <div className="flex-1 text-xl sm:text-2xl font-bold text-white drop-shadow">
-                          {opt.text || `אפשרות ${idx + 1}`}
+                          {opt.text || (opt.image_url ? "" : `אפשרות ${idx + 1}`)}
                         </div>
                         <div className="text-3xl sm:text-4xl font-extrabold text-white tabular-nums drop-shadow">
                           {count}
