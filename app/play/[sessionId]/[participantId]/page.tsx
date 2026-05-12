@@ -4,8 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import type { GameSession, Question, AnswerOption } from "@/lib/types";
+import type {
+  GameSession,
+  Question,
+  AnswerOption,
+  DesignSettings,
+} from "@/lib/types";
 import { getOptionStyle, OptionShape } from "@/lib/optionStyle";
+import { designStyle } from "@/lib/design";
 
 type MyResponse = { option_id?: string; text?: string } | null;
 
@@ -22,6 +28,7 @@ export default function PlaySessionPage() {
   const [myResponse, setMyResponse] = useState<MyResponse>(null);
   const [freeText, setFreeText] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [design, setDesign] = useState<DesignSettings | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -39,6 +46,17 @@ export default function PlaySessionPage() {
         return;
       }
       setSession(data as GameSession);
+
+      const { data: quizData } = await supabase
+        .from("quizzes")
+        .select("design_settings")
+        .eq("id", (data as GameSession).quiz_id)
+        .single();
+      if (cancelled) return;
+      setDesign(
+        ((quizData as { design_settings?: DesignSettings } | null)
+          ?.design_settings) ?? null,
+      );
     })();
     return () => {
       cancelled = true;
@@ -158,7 +176,10 @@ export default function PlaySessionPage() {
   }
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-6 p-5">
+    <main
+      style={designStyle(design)}
+      className="flex flex-1 flex-col items-center justify-center gap-6 p-5"
+    >
       {session.state === "waiting" && (
         <div className="flex flex-col items-center gap-4 text-center">
           <div className="relative h-16 w-16">

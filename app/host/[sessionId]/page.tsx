@@ -9,8 +9,10 @@ import type {
   Question,
   AnswerOption,
   Participant,
+  DesignSettings,
 } from "@/lib/types";
 import { getOptionStyle, OptionShape } from "@/lib/optionStyle";
+import { designStyle } from "@/lib/design";
 
 type FullQuestion = Question & { answer_options: AnswerOption[] };
 
@@ -28,6 +30,7 @@ export default function HostSessionPage() {
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [responses, setResponses] = useState<ResponseRow[]>([]);
   const [responseTick, setResponseTick] = useState(0);
+  const [design, setDesign] = useState<DesignSettings | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -45,6 +48,18 @@ export default function HostSessionPage() {
         return;
       }
       setSession(sessionData as GameSession);
+
+      const { data: quizData } = await supabase
+        .from("quizzes")
+        .select("design_settings")
+        .eq("id", (sessionData as GameSession).quiz_id)
+        .single();
+      if (!cancelled) {
+        setDesign(
+          ((quizData as { design_settings?: DesignSettings } | null)
+            ?.design_settings) ?? null,
+        );
+      }
 
       const { data: questionsData } = await supabase
         .from("questions")
@@ -227,7 +242,10 @@ export default function HostSessionPage() {
     : 0;
 
   return (
-    <main className="flex flex-1 flex-col items-center gap-10 p-6 sm:p-10">
+    <main
+      style={designStyle(design)}
+      className="flex flex-1 flex-col items-center gap-10 p-6 sm:p-10"
+    >
       {session.state === "waiting" && (
         <div className="flex flex-col items-center gap-8 max-w-5xl w-full">
           <p className="text-sm uppercase tracking-[0.2em] text-white/40">

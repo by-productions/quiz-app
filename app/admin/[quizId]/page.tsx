@@ -9,8 +9,10 @@ import type {
   Question,
   AnswerOption,
   QuestionType,
+  DesignSettings,
 } from "@/lib/types";
 import { getOptionStyle, OptionShape } from "@/lib/optionStyle";
+import { designStyle, DEFAULT_PRIMARY, DEFAULT_SECONDARY } from "@/lib/design";
 
 type QuestionWithOptions = Question & { answer_options: AnswerOption[] };
 
@@ -20,6 +22,7 @@ export default function QuizEditorPage() {
 
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [questions, setQuestions] = useState<QuestionWithOptions[]>([]);
+  const [design, setDesign] = useState<DesignSettings>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -38,7 +41,9 @@ export default function QuizEditorPage() {
         .eq("quiz_id", quizId)
         .order("position");
       if (cancelled) return;
-      setQuiz((q as Quiz) ?? null);
+      const quizRow = (q as Quiz) ?? null;
+      setQuiz(quizRow);
+      setDesign(quizRow?.design_settings ?? {});
       const list = ((qs ?? []) as unknown as QuestionWithOptions[]).map(
         (qq) => ({
           ...qq,
@@ -65,6 +70,28 @@ export default function QuizEditorPage() {
       .update({ title: trimmed })
       .eq("id", quiz.id);
     if (e) setError("שמירת כותרת נכשלה: " + e.message);
+  }
+
+  async function saveDesign(next: DesignSettings) {
+    if (!quiz) return;
+    const { error: e } = await supabase
+      .from("quizzes")
+      .update({ design_settings: next })
+      .eq("id", quiz.id);
+    if (e) setError("שמירת עיצוב נכשלה: " + e.message);
+  }
+
+  function updateDesign(patch: Partial<DesignSettings>) {
+    setDesign((prev) => {
+      const next = { ...prev, ...patch };
+      return next;
+    });
+  }
+
+  function resetDesign() {
+    const next: DesignSettings = {};
+    setDesign(next);
+    saveDesign(next);
   }
 
   async function addQuestion() {
@@ -266,8 +293,16 @@ export default function QuizEditorPage() {
     );
   }
 
+  const primaryColor = design.primary ?? DEFAULT_PRIMARY;
+  const secondaryColor = design.secondary ?? DEFAULT_SECONDARY;
+  const hasCustomDesign =
+    design.primary !== undefined || design.secondary !== undefined;
+
   return (
-    <main className="flex flex-1 flex-col items-center gap-6 p-6 sm:p-8">
+    <main
+      style={designStyle(design)}
+      className="flex flex-1 flex-col items-center gap-6 p-6 sm:p-8"
+    >
       <div className="w-full max-w-3xl">
         <Link href="/admin" className="text-sm text-white/50 hover:text-white">
           ← חזרה לרשימת חידונים
@@ -277,9 +312,67 @@ export default function QuizEditorPage() {
       <input
         defaultValue={quiz.title}
         onBlur={(e) => saveQuizTitle(e.target.value)}
-        className="w-full max-w-3xl bg-transparent border-b-2 border-transparent focus:border-violet-500 px-2 py-3 text-3xl sm:text-4xl font-bold text-white focus:outline-none"
+        className="w-full max-w-3xl bg-transparent border-b-2 border-transparent focus:border-(--accent-from) px-2 py-3 text-3xl sm:text-4xl font-bold text-white focus:outline-none"
+        style={{ borderBottomColor: "transparent" }}
         placeholder="שם החידון"
       />
+
+      <div className="w-full max-w-3xl glass rounded-3xl p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-xs uppercase tracking-wider text-white/40">
+            עיצוב החידון
+          </h3>
+          {hasCustomDesign && (
+            <button
+              onClick={resetDesign}
+              className="text-xs text-white/40 hover:text-white"
+            >
+              איפוס לברירת מחדל
+            </button>
+          )}
+        </div>
+        <div className="flex flex-wrap items-end gap-5">
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs text-white/50">צבע ראשי</span>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={primaryColor}
+                onChange={(e) => updateDesign({ primary: e.target.value })}
+                onBlur={() => saveDesign(design)}
+                className="h-10 w-14 cursor-pointer rounded-xl border border-white/10 bg-transparent"
+              />
+              <span className="font-mono text-sm text-white/70">
+                {primaryColor.toUpperCase()}
+              </span>
+            </div>
+          </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs text-white/50">צבע משני</span>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={secondaryColor}
+                onChange={(e) => updateDesign({ secondary: e.target.value })}
+                onBlur={() => saveDesign(design)}
+                className="h-10 w-14 cursor-pointer rounded-xl border border-white/10 bg-transparent"
+              />
+              <span className="font-mono text-sm text-white/70">
+                {secondaryColor.toUpperCase()}
+              </span>
+            </div>
+          </label>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-xs text-white/50">תצוגה מקדימה</span>
+            <div className="flex items-center gap-3">
+              <div className="gradient-bg brand-glow rounded-full px-5 py-2 text-sm font-semibold text-white">
+                כפתור
+              </div>
+              <div className="gradient-text text-xl font-bold">כותרת</div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {error && (
         <p className="w-full max-w-3xl text-rose-400 text-sm">{error}</p>

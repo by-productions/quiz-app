@@ -10,10 +10,17 @@ export type SessionState =
   | "showing_results"
   | "ended";
 
+export type DesignSettings = {
+  /** Brand primary color (hex). Falls back to the default violet. */
+  primary?: string;
+  /** Brand secondary color (hex). Falls back to the default pink. */
+  secondary?: string;
+};
+
 export type Quiz = {
   id: string;
   title: string;
-  design_settings: Record<string, unknown>;
+  design_settings: DesignSettings;
   created_at: string;
 };
 
