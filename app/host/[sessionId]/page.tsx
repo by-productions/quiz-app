@@ -13,12 +13,15 @@ import type {
 } from "@/lib/types";
 import { getOptionStyle, OptionShape } from "@/lib/optionStyle";
 import { designStyle } from "@/lib/design";
+import { useNow, formatSeconds, remainingSeconds } from "@/lib/timer";
 
 type FullQuestion = Question & { answer_options: AnswerOption[] };
 
 type ResponseRow = {
-  answer_data: { option_id?: string; text?: string };
+  participant_id: string;
+  answer_data: { option_id?: string; text?: string; rating?: number };
   nickname: string;
+  avatar_url: string | null;
 };
 
 function aggregateWords(responses: ResponseRow[]): Array<[string, number]> {
@@ -159,6 +162,19 @@ export default function HostSessionPage() {
       .on(
         "postgres_changes",
         {
+          event: "UPDATE",
+          schema: "public",
+          table: "participants",
+          filter: `session_id=eq.${sessionId}`,
+        },
+        (payload: { new: Participant }) =>
+          setParticipants((prev) =>
+            prev.map((p) => (p.id === payload.new.id ? payload.new : p)),
+          ),
+      )
+      .on(
+        "postgres_changes",
+        {
           event: "INSERT",
           schema: "public",
           table: "responses",
@@ -182,18 +198,23 @@ export default function HostSessionPage() {
     (async () => {
       const { data } = await supabase
         .from("responses")
-        .select("answer_data, participants(nickname)")
+        .select(
+          "participant_id, answer_data, participants(nickname, avatar_url)",
+        )
         .eq("session_id", sessionId)
         .eq("question_id", qid);
       if (cancelled) return;
       const rows = (
         (data ?? []) as Array<{
-          answer_data: { option_id?: string; text?: string };
-          participants: { nickname: string } | null;
+          participant_id: string;
+          answer_data: ResponseRow["answer_data"];
+          participants: { nickname: string; avatar_url: string | null } | null;
         }>
       ).map((r) => ({
+        participant_id: r.participant_id,
         answer_data: r.answer_data,
         nickname: r.participants?.nickname ?? "אנונימי",
+        avatar_url: r.participants?.avatar_url ?? null,
       }));
       setResponses(rows);
     })();
@@ -223,11 +244,41 @@ export default function HostSessionPage() {
     if (!first) return;
     await supabase
       .from("game_sessions")
-      .update({ state: "question_active", current_question_id: first.id })
+      .update({
+        state: "question_active",
+        current_question_id: first.id,
+        question_started_at: new Date().toISOString(),
+      })
       .eq("id", sessionId);
   }
 
   async function showResults() {
+    if (session?.state !== "question_active") return;
+    if (!currentQuestion) return;
+
+    // Score MC / true_false: +100 per correct response
+    if (
+      currentQuestion.type === "multiple_choice" ||
+      currentQuestion.type === "true_false"
+    ) {
+      const correctOpt = currentQuestion.answer_options.find(
+        (o) => o.is_correct,
+      );
+      if (correctOpt) {
+        const correctParticipantIds = responses
+          .filter((r) => r.answer_data.option_id === correctOpt.id)
+          .map((r) => r.participant_id);
+        for (const pid of correctParticipantIds) {
+          const p = participants.find((pp) => pp.id === pid);
+          if (!p) continue;
+          await supabase
+            .from("participants")
+            .update({ score: (p.score ?? 0) + 100 })
+            .eq("id", pid);
+        }
+      }
+    }
+
     await supabase
       .from("game_sessions")
       .update({ state: "showing_results" })
@@ -244,6 +295,7 @@ export default function HostSessionPage() {
         .update({
           state: "question_active",
           current_question_id: next.id,
+          question_started_at: new Date().toISOString(),
         })
         .eq("id", sessionId);
     } else {
@@ -257,6 +309,33 @@ export default function HostSessionPage() {
       .update({ state: "ended" })
       .eq("id", sessionId);
   }
+
+  const effectiveTimeLimit =
+    currentQuestion?.time_limit ?? design?.default_time_limit ?? null;
+
+  const showCountdown =
+    session?.state === "question_active" &&
+    effectiveTimeLimit != null &&
+    effectiveTimeLimit > 0 &&
+    session.question_started_at != null &&
+    currentQuestion?.type !== "slide";
+
+  const now = useNow(!!showCountdown);
+  const remainingSec = showCountdown
+    ? remainingSeconds(
+        session.question_started_at,
+        effectiveTimeLimit,
+        now,
+      )
+    : 0;
+
+  // Auto-advance to results when timer reaches zero
+  useEffect(() => {
+    if (!showCountdown) return;
+    if (remainingSec > 0) return;
+    showResults();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showCountdown, remainingSec]);
 
   if (error) {
     return (
@@ -320,8 +399,20 @@ export default function HostSessionPage() {
                 {participants.map((p) => (
                   <li
                     key={p.id}
-                    className="rounded-full bg-white/10 px-3 py-1.5 text-sm text-white"
+                    className="flex items-center gap-2 rounded-full bg-white/10 pl-3 pr-1 py-1 text-sm text-white"
                   >
+                    {p.avatar_url ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={p.avatar_url}
+                        alt=""
+                        className="h-7 w-7 rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="h-7 w-7 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">
+                        {p.nickname.slice(0, 1)}
+                      </span>
+                    )}
                     {p.nickname}
                   </li>
                 ))}
@@ -357,6 +448,17 @@ export default function HostSessionPage() {
                 {session.state === "question_active" ? "פעיל" : "תוצאות"}
               </span>
             </div>
+
+            {showCountdown && (
+              <div
+                className={`font-mono font-extrabold tabular-nums tracking-wider ${
+                  remainingSec <= 5 ? "text-rose-400" : "gradient-text"
+                }`}
+                style={{ fontSize: "clamp(2.5rem, 7vw, 4.5rem)", lineHeight: 1 }}
+              >
+                {formatSeconds(remainingSec)}
+              </div>
+            )}
 
             {currentQuestion.image_url && (
               /* eslint-disable-next-line @next/next/no-img-element */
@@ -468,19 +570,37 @@ export default function HostSessionPage() {
                     </p>
                   ) : (
                     <ul className="space-y-2">
-                      {freeResponses.map((r, i) => (
-                        <li
-                          key={i}
-                          className="rounded-2xl bg-white/5 px-4 py-3 border border-white/5"
-                        >
-                          <span className="text-xs uppercase tracking-wider text-white/40">
-                            {r.nickname}
-                          </span>
-                          <div className="mt-1 text-lg text-white">
-                            {r.text}
-                          </div>
-                        </li>
-                      ))}
+                      {responses
+                        .filter(
+                          (r) => typeof r.answer_data.text === "string",
+                        )
+                        .map((r, i) => (
+                          <li
+                            key={i}
+                            className="flex gap-3 items-start rounded-2xl bg-white/5 px-4 py-3 border border-white/5"
+                          >
+                            {r.avatar_url ? (
+                              /* eslint-disable-next-line @next/next/no-img-element */
+                              <img
+                                src={r.avatar_url}
+                                alt=""
+                                className="h-9 w-9 rounded-full object-cover shrink-0"
+                              />
+                            ) : (
+                              <span className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center text-sm font-bold text-white shrink-0">
+                                {r.nickname.slice(0, 1)}
+                              </span>
+                            )}
+                            <div className="flex-1">
+                              <div className="text-xs uppercase tracking-wider text-white/40">
+                                {r.nickname}
+                              </div>
+                              <div className="mt-0.5 text-lg text-white">
+                                {r.answer_data.text}
+                              </div>
+                            </div>
+                          </li>
+                        ))}
                     </ul>
                   )}
                 </div>
@@ -654,11 +774,91 @@ export default function HostSessionPage() {
         )}
 
       {session.state === "ended" && (
-        <div className="flex flex-col items-center gap-6">
-          <h2 className="text-5xl sm:text-6xl font-bold gradient-text">
-            המשחק הסתיים
+        <div className="flex flex-col items-center gap-6 w-full max-w-3xl">
+          <h2 className="text-4xl sm:text-5xl font-bold gradient-text text-center">
+            🏆 סיום משחק
           </h2>
-          <p className="text-white/60">תודה לכל המשתתפים 🎉</p>
+
+          {(() => {
+            const ranked = [...participants].sort(
+              (a, b) => (b.score ?? 0) - (a.score ?? 0),
+            );
+            const podium = ranked.slice(0, 3);
+            const rest = ranked.slice(3);
+            const medals = ["🥇", "🥈", "🥉"];
+            return (
+              <>
+                {podium.length > 0 && (
+                  <div className="grid w-full gap-3 sm:grid-cols-3">
+                    {podium.map((p, i) => (
+                      <div
+                        key={p.id}
+                        className={`glass-strong rounded-3xl p-5 text-center flex flex-col items-center gap-2 ${
+                          i === 0 ? "sm:-mt-4 brand-glow" : ""
+                        }`}
+                      >
+                        <div className="text-3xl">{medals[i]}</div>
+                        {p.avatar_url ? (
+                          /* eslint-disable-next-line @next/next/no-img-element */
+                          <img
+                            src={p.avatar_url}
+                            alt=""
+                            className="h-16 w-16 sm:h-20 sm:w-20 rounded-full object-cover border-2 border-white/30"
+                          />
+                        ) : (
+                          <span className="h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-white/15 flex items-center justify-center text-2xl font-bold text-white">
+                            {p.nickname.slice(0, 1)}
+                          </span>
+                        )}
+                        <div className="font-semibold text-white">
+                          {p.nickname}
+                        </div>
+                        <div className="font-extrabold gradient-text text-3xl tabular-nums">
+                          {p.score ?? 0}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {rest.length > 0 && (
+                  <div className="w-full glass rounded-3xl p-4">
+                    <ul className="space-y-1.5">
+                      {rest.map((p, i) => (
+                        <li
+                          key={p.id}
+                          className="flex items-center gap-3 px-2 py-1.5"
+                        >
+                          <span className="w-6 text-center text-white/40 text-sm tabular-nums">
+                            {i + 4}
+                          </span>
+                          {p.avatar_url ? (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img
+                              src={p.avatar_url}
+                              alt=""
+                              className="h-8 w-8 rounded-full object-cover"
+                            />
+                          ) : (
+                            <span className="h-8 w-8 rounded-full bg-white/10 flex items-center justify-center text-xs font-bold text-white">
+                              {p.nickname.slice(0, 1)}
+                            </span>
+                          )}
+                          <span className="flex-1 text-white">
+                            {p.nickname}
+                          </span>
+                          <span className="text-white/80 font-bold tabular-nums">
+                            {p.score ?? 0}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </>
+            );
+          })()}
+
           <Link
             href="/host"
             className="glass glass-hover rounded-full px-8 py-3 text-white"

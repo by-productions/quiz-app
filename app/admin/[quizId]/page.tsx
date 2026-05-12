@@ -445,6 +445,29 @@ export default function QuizEditorPage() {
               </span>
             </div>
           </label>
+          <label className="flex flex-col gap-1.5">
+            <span className="text-xs text-white/50">
+              טיימר ברירת מחדל (שניות)
+            </span>
+            <input
+              type="number"
+              min="0"
+              step="5"
+              defaultValue={design.default_time_limit ?? ""}
+              onBlur={(e) => {
+                const v = e.target.value.trim();
+                const num = v === "" ? null : Math.max(0, parseInt(v, 10) || 0);
+                const next = {
+                  ...design,
+                  default_time_limit: num,
+                } as DesignSettings;
+                setDesign(next);
+                saveDesign(next);
+              }}
+              placeholder="ללא"
+              className="input-surface rounded-xl px-3 py-2 w-24 text-center text-white"
+            />
+          </label>
           <div className="flex flex-col gap-1.5">
             <span className="text-xs text-white/50">תצוגה מקדימה</span>
             <div className="flex items-center gap-3">

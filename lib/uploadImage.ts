@@ -29,3 +29,18 @@ export async function deleteQuizImage(
   // Best-effort: ignore errors so editor flow isn't blocked by storage issues
   await supabase.storage.from(BUCKET).remove([path]);
 }
+
+export async function uploadAvatarBlob(
+  blob: Blob,
+  supabase: SupabaseClient,
+): Promise<string> {
+  const path = `avatars/${crypto.randomUUID()}.jpg`;
+  const { error } = await supabase.storage.from(BUCKET).upload(path, blob, {
+    cacheControl: "3600",
+    upsert: false,
+    contentType: "image/jpeg",
+  });
+  if (error) throw error;
+  const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}

@@ -19,6 +19,8 @@ export type DesignSettings = {
   primary?: string;
   /** Brand secondary color (hex). Falls back to the default pink. */
   secondary?: string;
+  /** Default time limit per question in seconds. null/undefined = no timer. */
+  default_time_limit?: number | null;
 };
 
 export type Quiz = {
@@ -55,6 +57,7 @@ export type GameSession = {
   join_code: string;
   state: SessionState;
   current_question_id: string | null;
+  question_started_at: string | null;
   created_at: string;
 };
 
@@ -62,6 +65,8 @@ export type Participant = {
   id: string;
   session_id: string;
   nickname: string;
+  avatar_url: string | null;
+  score: number;
   joined_at: string;
 };
 

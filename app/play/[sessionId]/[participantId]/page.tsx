@@ -9,9 +9,12 @@ import type {
   Question,
   AnswerOption,
   DesignSettings,
+  Participant,
 } from "@/lib/types";
 import { getOptionStyle, OptionShape } from "@/lib/optionStyle";
 import { designStyle } from "@/lib/design";
+import { useNow, formatSeconds, remainingSeconds } from "@/lib/timer";
+import { SelfieCapture } from "@/lib/SelfieCapture";
 
 type MyResponse =
   | { option_id?: string; text?: string; rating?: number }
@@ -31,6 +34,7 @@ export default function PlaySessionPage() {
   const [freeText, setFreeText] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [design, setDesign] = useState<DesignSettings | null>(null);
+  const [me, setMe] = useState<Participant | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -84,6 +88,46 @@ export default function PlaySessionPage() {
       channel.unsubscribe();
     };
   }, [sessionId, supabase]);
+
+  // Load + subscribe to my own participant row (for avatar + score)
+  useEffect(() => {
+    if (!participantId) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("participants")
+        .select("*")
+        .eq("id", participantId)
+        .single();
+      if (cancelled) return;
+      setMe((data as Participant) ?? null);
+    })();
+    const channel = supabase
+      .channel(`me-${participantId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "participants",
+          filter: `id=eq.${participantId}`,
+        },
+        (payload: { new: Participant }) => setMe(payload.new),
+      )
+      .subscribe();
+    return () => {
+      cancelled = true;
+      channel.unsubscribe();
+    };
+  }, [participantId, supabase]);
+
+  async function handleAvatarSaved(url: string) {
+    setMe((prev) => (prev ? { ...prev, avatar_url: url } : prev));
+    await supabase
+      .from("participants")
+      .update({ avatar_url: url })
+      .eq("id", participantId);
+  }
 
   useEffect(() => {
     const qid = session?.current_question_id;
@@ -173,6 +217,22 @@ export default function PlaySessionPage() {
     }
   }
 
+  const effectiveTimeLimit =
+    question?.time_limit ?? design?.default_time_limit ?? null;
+  const showCountdown =
+    session?.state === "question_active" &&
+    !!effectiveTimeLimit &&
+    !!session?.question_started_at &&
+    question?.type !== "slide";
+  const nowMs = useNow(!!showCountdown);
+  const remainingSec = showCountdown
+    ? remainingSeconds(
+        session?.question_started_at ?? null,
+        effectiveTimeLimit,
+        nowMs,
+      )
+    : 0;
+
   if (error) {
     return (
       <main className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
@@ -198,15 +258,32 @@ export default function PlaySessionPage() {
       className="flex flex-1 flex-col items-center justify-center gap-6 p-5"
     >
       {session.state === "waiting" && (
-        <div className="flex flex-col items-center gap-4 text-center">
+        <div className="flex flex-col items-center gap-6 text-center">
           <div className="relative h-16 w-16">
             <div className="absolute inset-0 rounded-full gradient-bg opacity-40 animate-ping" />
             <div className="absolute inset-3 rounded-full gradient-bg" />
           </div>
-          <p className="text-xl font-semibold text-white">
-            ממתינים שהמנחה תתחיל
-          </p>
-          <p className="text-sm text-white/50">המסך יקפוץ אוטומטית</p>
+          <div>
+            <p className="text-xl font-semibold text-white">
+              ממתינים שהמנחה תתחיל
+            </p>
+            <p className="text-sm text-white/50 mt-1">המסך יקפוץ אוטומטית</p>
+          </div>
+          <SelfieCapture
+            currentAvatarUrl={me?.avatar_url ?? null}
+            onSaved={handleAvatarSaved}
+          />
+        </div>
+      )}
+
+      {showCountdown && (
+        <div
+          className={`font-mono font-extrabold tabular-nums tracking-wider ${
+            remainingSec <= 5 ? "text-rose-400" : "gradient-text"
+          }`}
+          style={{ fontSize: "clamp(2rem, 8vw, 3rem)", lineHeight: 1 }}
+        >
+          {formatSeconds(remainingSec)}
         </div>
       )}
 
@@ -419,12 +496,32 @@ export default function PlaySessionPage() {
       )}
 
       {session.state === "ended" && (
-        <div className="flex flex-col items-center gap-5 text-center">
-          <h2 className="text-4xl font-bold gradient-text">המשחק הסתיים</h2>
-          <p className="text-2xl">🎉</p>
+        <div className="flex flex-col items-center gap-5 text-center max-w-sm">
+          <h2 className="text-3xl font-bold gradient-text">המשחק הסתיים 🎉</h2>
+          {me?.avatar_url ? (
+            /* eslint-disable-next-line @next/next/no-img-element */
+            <img
+              src={me.avatar_url}
+              alt=""
+              className="h-24 w-24 rounded-full object-cover border-2 border-white/30"
+            />
+          ) : (
+            <div className="h-24 w-24 rounded-full bg-white/10 flex items-center justify-center text-3xl font-bold text-white">
+              {me?.nickname?.slice(0, 1) ?? "?"}
+            </div>
+          )}
+          <div>
+            <p className="text-white/60 text-sm">הניקוד שלך</p>
+            <p
+              className="font-extrabold gradient-text tabular-nums leading-none mt-1"
+              style={{ fontSize: "clamp(3.5rem, 12vw, 5rem)" }}
+            >
+              {me?.score ?? 0}
+            </p>
+          </div>
           <Link
             href="/play"
-            className="glass glass-hover rounded-full px-8 py-3 text-white"
+            className="glass glass-hover rounded-full px-7 py-3 text-white text-sm"
           >
             הצטרפות למשחק חדש
           </Link>
