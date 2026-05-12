@@ -240,30 +240,49 @@ export default function PlaySessionPage() {
             </div>
           )}
 
-          {question.type === "free_response" && (
+          {(question.type === "free_response" ||
+            question.type === "word_cloud") && (
             <>
               {myResponse?.text ? (
                 <div className="glass-strong w-full rounded-3xl px-5 py-4">
                   <div className="text-xs uppercase tracking-wider text-white/50 mb-1">
-                    התגובה שלך
+                    {question.type === "word_cloud"
+                      ? "המילה שלך"
+                      : "התגובה שלך"}
                   </div>
                   <div className="text-lg text-white">{myResponse.text}</div>
                 </div>
               ) : (
                 <div className="w-full flex flex-col gap-3">
-                  <textarea
-                    value={freeText}
-                    onChange={(e) => setFreeText(e.target.value)}
-                    placeholder="כתבי את התגובה שלך…"
-                    rows={4}
-                    className="input-surface rounded-2xl px-5 py-4 text-lg resize-none"
-                  />
+                  {question.type === "word_cloud" ? (
+                    <input
+                      type="text"
+                      value={freeText}
+                      onChange={(e) => setFreeText(e.target.value)}
+                      placeholder="מילה אחת…"
+                      maxLength={40}
+                      autoFocus
+                      className="input-surface rounded-2xl px-5 py-4 text-2xl text-center"
+                    />
+                  ) : (
+                    <textarea
+                      value={freeText}
+                      onChange={(e) => setFreeText(e.target.value)}
+                      placeholder="כתבי את התגובה שלך…"
+                      rows={4}
+                      className="input-surface rounded-2xl px-5 py-4 text-lg resize-none"
+                    />
+                  )}
                   <button
                     onClick={submitFreeText}
                     disabled={submitting || !freeText.trim()}
                     className="gradient-bg brand-glow rounded-full px-6 py-4 font-bold text-white text-lg hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:hover:scale-100"
                   >
-                    {submitting ? "שולחת…" : "שלחי תגובה"}
+                    {submitting
+                      ? "שולחת…"
+                      : question.type === "word_cloud"
+                      ? "שלחי"
+                      : "שלחי תגובה"}
                   </button>
                 </div>
               )}

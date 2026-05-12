@@ -21,6 +21,51 @@ type ResponseRow = {
   nickname: string;
 };
 
+function aggregateWords(responses: ResponseRow[]): Array<[string, number]> {
+  const counts = new Map<string, number>();
+  for (const r of responses) {
+    const text = r.answer_data.text?.trim().toLowerCase();
+    if (!text) continue;
+    counts.set(text, (counts.get(text) ?? 0) + 1);
+  }
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]);
+}
+
+function WordCloudView({ entries }: { entries: Array<[string, number]> }) {
+  if (entries.length === 0) {
+    return (
+      <div className="glass rounded-3xl px-10 py-12 text-center">
+        <p className="text-white/50 text-lg">ממתינים למילים…</p>
+      </div>
+    );
+  }
+  const max = entries[0][1];
+  return (
+    <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4 py-8 px-4 max-w-5xl">
+      {entries.map(([word, count]) => {
+        const ratio = count / max;
+        const fontSize = 1.2 + ratio * 4.5; // 1.2rem → 5.7rem
+        const isTop = ratio > 0.66;
+        return (
+          <span
+            key={word}
+            className={`font-extrabold leading-none whitespace-nowrap ${
+              isTop ? "gradient-text" : "text-white"
+            }`}
+            style={{
+              fontSize: `${fontSize}rem`,
+              opacity: isTop ? 1 : 0.45 + ratio * 0.5,
+            }}
+            title={`${word} — ${count}`}
+          >
+            {word}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function HostSessionPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const supabase = useMemo(() => createClient(), []);
@@ -423,6 +468,10 @@ export default function HostSessionPage() {
                   )}
                 </div>
               )}
+
+            {currentQuestion.type === "word_cloud" && (
+              <WordCloudView entries={aggregateWords(responses)} />
+            )}
 
             {session.state === "question_active" && (
               <button

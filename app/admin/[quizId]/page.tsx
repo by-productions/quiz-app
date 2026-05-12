@@ -406,39 +406,32 @@ export default function QuizEditorPage() {
               placeholder="טקסט השאלה"
             />
 
-            <div className="mt-4 flex gap-3 text-sm">
-              <label
-                className={`flex items-center gap-2 cursor-pointer rounded-full px-4 py-1.5 transition-colors ${
-                  q.type === "multiple_choice"
-                    ? "bg-white/15 text-white"
-                    : "text-white/50 hover:text-white"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name={`type-${q.id}`}
-                  checked={q.type === "multiple_choice"}
-                  onChange={() => changeQuestionType(q.id, "multiple_choice")}
-                  className="sr-only"
-                />
-                רב-ברירה
-              </label>
-              <label
-                className={`flex items-center gap-2 cursor-pointer rounded-full px-4 py-1.5 transition-colors ${
-                  q.type === "free_response"
-                    ? "bg-white/15 text-white"
-                    : "text-white/50 hover:text-white"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name={`type-${q.id}`}
-                  checked={q.type === "free_response"}
-                  onChange={() => changeQuestionType(q.id, "free_response")}
-                  className="sr-only"
-                />
-                תגובה חופשית
-              </label>
+            <div className="mt-4 flex flex-wrap gap-2 text-sm">
+              {(
+                [
+                  { value: "multiple_choice", label: "רב-ברירה" },
+                  { value: "free_response", label: "תגובה חופשית" },
+                  { value: "word_cloud", label: "ענן מילים" },
+                ] as const
+              ).map((option) => (
+                <label
+                  key={option.value}
+                  className={`flex items-center gap-2 cursor-pointer rounded-full px-4 py-1.5 transition-colors ${
+                    q.type === option.value
+                      ? "bg-white/15 text-white"
+                      : "text-white/50 hover:text-white"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name={`type-${q.id}`}
+                    checked={q.type === option.value}
+                    onChange={() => changeQuestionType(q.id, option.value)}
+                    className="sr-only"
+                  />
+                  {option.label}
+                </label>
+              ))}
             </div>
 
             {q.type === "multiple_choice" && (
@@ -506,6 +499,13 @@ export default function QuizEditorPage() {
             {q.type === "free_response" && (
               <p className="mt-4 text-sm text-white/50">
                 המשתתפים יקלידו תגובה חופשית בטקסט.
+              </p>
+            )}
+
+            {q.type === "word_cloud" && (
+              <p className="mt-4 text-sm text-white/50">
+                המשתתפים ישלחו מילה או ביטוי קצר. המסך הראשי יציג ענן —
+                מילים שחוזרות יגדלו אוטומטית.
               </p>
             )}
           </div>

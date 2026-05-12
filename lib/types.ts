@@ -1,6 +1,7 @@
 export type QuestionType =
   | "multiple_choice"
   | "free_response"
+  | "word_cloud"
   | "poll"
   | "ranking";
 
