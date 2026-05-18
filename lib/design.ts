@@ -19,3 +19,4 @@ export function designStyle(
     ["--accent-to" as string]: secondary,
   } as CSSProperties;
 }
+

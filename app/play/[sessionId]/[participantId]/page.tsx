@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { motion } from "motion/react";
 import { createClient } from "@/lib/supabase/client";
 import type {
   GameSession,
@@ -15,6 +16,7 @@ import { getOptionStyle, OptionShape } from "@/lib/optionStyle";
 import { designStyle } from "@/lib/design";
 import { useNow, formatSeconds, remainingSeconds } from "@/lib/timer";
 import { SelfieCapture } from "@/lib/SelfieCapture";
+import { Backdrop, LogoChip } from "@/lib/Backdrop";
 
 type MyResponse =
   | { option_id?: string; text?: string; rating?: number }
@@ -257,6 +259,8 @@ export default function PlaySessionPage() {
       style={designStyle(design)}
       className="flex flex-1 flex-col items-center justify-center gap-6 p-5"
     >
+      <Backdrop design={design} />
+      <LogoChip design={design} />
       {session.state === "waiting" && (
         <div className="flex flex-col items-center gap-6 text-center">
           <div className="relative h-16 w-16">
@@ -291,15 +295,25 @@ export default function PlaySessionPage() {
         <div className="flex flex-col items-center gap-6 w-full max-w-md">
           {question.image_url && (
             /* eslint-disable-next-line @next/next/no-img-element */
-            <img
+            <motion.img
+              key={`img-${question.id}`}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.3 }}
               src={question.image_url}
               alt=""
               className="rounded-2xl max-h-48 w-auto object-contain"
             />
           )}
-          <h2 className="text-2xl sm:text-3xl font-bold text-center text-white leading-tight">
+          <motion.h2
+            key={question.id}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="text-2xl sm:text-3xl font-bold text-center text-white leading-tight"
+          >
             {question.question_text}
-          </h2>
+          </motion.h2>
 
           {question.type === "multiple_choice" && (
             <div className="grid w-full gap-3 grid-cols-1 sm:grid-cols-2">
@@ -308,8 +322,12 @@ export default function PlaySessionPage() {
                 const isSelected = myResponse?.option_id === opt.id;
                 const disabled = !!myResponse;
                 return (
-                  <button
+                  <motion.button
                     key={opt.id}
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.25, delay: idx * 0.08 }}
+                    whileTap={disabled ? {} : { scale: 0.96 }}
                     onClick={() => voteMC(opt.id)}
                     disabled={disabled}
                     className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${style.gradient} px-5 py-6 text-right transition-all ${
@@ -317,7 +335,7 @@ export default function PlaySessionPage() {
                         ? "ring-4 ring-white scale-[1.02]"
                         : disabled
                         ? "opacity-40"
-                        : "active:scale-95"
+                        : ""
                     }`}
                     style={{
                       boxShadow: isSelected
@@ -345,7 +363,7 @@ export default function PlaySessionPage() {
                           (opt.image_url ? "" : `אפשרות ${idx + 1}`)}
                       </div>
                     </div>
-                  </button>
+                  </motion.button>
                 );
               })}
             </div>

@@ -21,6 +21,10 @@ export type DesignSettings = {
   secondary?: string;
   /** Default time limit per question in seconds. null/undefined = no timer. */
   default_time_limit?: number | null;
+  /** Quiz logo, shown in the corner of host + player views. */
+  logo_url?: string | null;
+  /** Replaces the gradient backdrop with this image (with a dark overlay). */
+  background_image_url?: string | null;
 };
 
 export type Quiz = {

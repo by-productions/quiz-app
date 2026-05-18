@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { motion, AnimatePresence } from "motion/react";
 import { createClient } from "@/lib/supabase/client";
 import type {
   GameSession,
@@ -14,6 +15,7 @@ import type {
 import { getOptionStyle, OptionShape } from "@/lib/optionStyle";
 import { designStyle } from "@/lib/design";
 import { useNow, formatSeconds, remainingSeconds } from "@/lib/timer";
+import { Backdrop, LogoChip } from "@/lib/Backdrop";
 
 type FullQuestion = Question & { answer_options: AnswerOption[] };
 
@@ -370,17 +372,22 @@ export default function HostSessionPage() {
       style={designStyle(design)}
       className="flex flex-1 flex-col items-center gap-10 p-6 sm:p-10"
     >
+      <Backdrop design={design} />
+      <LogoChip design={design} />
       {session.state === "waiting" && (
         <div className="flex flex-col items-center gap-8 max-w-5xl w-full">
           <p className="text-sm uppercase tracking-[0.2em] text-white/40">
             הצטרפות
           </p>
-          <p
+          <motion.p
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, ease: "easeOut" }}
             className="font-mono font-extrabold tracking-[0.18em] gradient-text"
             style={{ fontSize: "clamp(4rem, 18vw, 12rem)", lineHeight: 1 }}
           >
             {session.join_code}
-          </p>
+          </motion.p>
           <p className="text-white/60 text-sm sm:text-base">
             פתחו <span className="font-mono text-white">/play</span> והקלידו את
             הקוד
@@ -396,26 +403,33 @@ export default function HostSessionPage() {
               </p>
             ) : (
               <ul className="flex flex-wrap gap-2">
-                {participants.map((p) => (
-                  <li
-                    key={p.id}
-                    className="flex items-center gap-2 rounded-full bg-white/10 pl-3 pr-1 py-1 text-sm text-white"
-                  >
-                    {p.avatar_url ? (
-                      /* eslint-disable-next-line @next/next/no-img-element */
-                      <img
-                        src={p.avatar_url}
-                        alt=""
-                        className="h-7 w-7 rounded-full object-cover"
-                      />
-                    ) : (
-                      <span className="h-7 w-7 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">
-                        {p.nickname.slice(0, 1)}
-                      </span>
-                    )}
-                    {p.nickname}
-                  </li>
-                ))}
+                <AnimatePresence initial={false}>
+                  {participants.map((p) => (
+                    <motion.li
+                      key={p.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.7 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.7 }}
+                      transition={{ duration: 0.25 }}
+                      className="flex items-center gap-2 rounded-full bg-white/10 pl-3 pr-1 py-1 text-sm text-white"
+                    >
+                      {p.avatar_url ? (
+                        /* eslint-disable-next-line @next/next/no-img-element */
+                        <img
+                          src={p.avatar_url}
+                          alt=""
+                          className="h-7 w-7 rounded-full object-cover"
+                        />
+                      ) : (
+                        <span className="h-7 w-7 rounded-full bg-white/20 flex items-center justify-center text-xs font-bold">
+                          {p.nickname.slice(0, 1)}
+                        </span>
+                      )}
+                      {p.nickname}
+                    </motion.li>
+                  ))}
+                </AnimatePresence>
               </ul>
             )}
           </div>
@@ -469,12 +483,16 @@ export default function HostSessionPage() {
               />
             )}
 
-            <h2
+            <motion.h2
+              key={currentQuestion.id}
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
               className="text-center font-bold text-white leading-tight"
               style={{ fontSize: "clamp(1.75rem, 4.5vw, 3.5rem)" }}
             >
               {currentQuestion.question_text}
-            </h2>
+            </motion.h2>
 
             {currentQuestion.type === "multiple_choice" && (
               <div className="grid w-full gap-4 sm:grid-cols-2">
@@ -492,8 +510,11 @@ export default function HostSessionPage() {
                   const isResults = session.state === "showing_results";
                   const isCorrect = opt.is_correct;
                   return (
-                    <div
+                    <motion.div
                       key={opt.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.3, delay: idx * 0.08 }}
                       className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${style.gradient} p-6 sm:p-7 ${
                         isResults && !isCorrect ? "opacity-50" : ""
                       } ${
@@ -529,18 +550,25 @@ export default function HostSessionPage() {
                       </div>
                       {isResults && (
                         <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-white/20">
-                          <div
+                          <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${pct}%` }}
+                            transition={{ duration: 0.8, ease: "easeOut" }}
                             className="h-full bg-white/95"
-                            style={{ width: `${pct}%` }}
                           />
                         </div>
                       )}
                       {isResults && isCorrect && (
-                        <div className="absolute top-3 left-3 rounded-full bg-white text-emerald-700 px-2.5 py-0.5 text-xs font-bold">
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.5 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ duration: 0.3, delay: 0.4 }}
+                          className="absolute top-3 left-3 rounded-full bg-white text-emerald-700 px-2.5 py-0.5 text-xs font-bold"
+                        >
                           תשובה נכונה ✓
-                        </div>
+                        </motion.div>
                       )}
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>
@@ -791,8 +819,15 @@ export default function HostSessionPage() {
                 {podium.length > 0 && (
                   <div className="grid w-full gap-3 sm:grid-cols-3">
                     {podium.map((p, i) => (
-                      <div
+                      <motion.div
                         key={p.id}
+                        initial={{ opacity: 0, y: 40 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{
+                          duration: 0.5,
+                          delay: (2 - i) * 0.35,
+                          ease: "easeOut",
+                        }}
                         className={`glass-strong rounded-3xl p-5 text-center flex flex-col items-center gap-2 ${
                           i === 0 ? "sm:-mt-4 brand-glow" : ""
                         }`}
@@ -816,7 +851,7 @@ export default function HostSessionPage() {
                         <div className="font-extrabold gradient-text text-3xl tabular-nums">
                           {p.score ?? 0}
                         </div>
-                      </div>
+                      </motion.div>
                     ))}
                   </div>
                 )}

@@ -3,6 +3,23 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  KeyboardSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { createClient } from "@/lib/supabase/client";
 import type {
   Quiz,
@@ -14,8 +31,42 @@ import type {
 import { getOptionStyle, OptionShape } from "@/lib/optionStyle";
 import { designStyle, DEFAULT_PRIMARY, DEFAULT_SECONDARY } from "@/lib/design";
 import { ImageUpload } from "@/lib/ImageUpload";
+import { THEME_PRESETS } from "@/lib/themePresets";
+import { Backdrop } from "@/lib/Backdrop";
 
 type QuestionWithOptions = Question & { answer_options: AnswerOption[] };
+
+function SortableQuestion({
+  id,
+  children,
+}: {
+  id: string;
+  children: (handle: {
+    attributes: ReturnType<typeof useSortable>["attributes"];
+    listeners: ReturnType<typeof useSortable>["listeners"];
+  }) => React.ReactNode;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.6 : 1,
+      }}
+    >
+      {children({ attributes, listeners })}
+    </div>
+  );
+}
 
 export default function QuizEditorPage() {
   const { quizId } = useParams<{ quizId: string }>();
@@ -24,8 +75,36 @@ export default function QuizEditorPage() {
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [questions, setQuestions] = useState<QuestionWithOptions[]>([]);
   const [design, setDesign] = useState<DesignSettings>({});
+  const [designTab, setDesignTab] = useState<"presets" | "colors" | "brand">(
+    "presets",
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = questions.findIndex((q) => q.id === active.id);
+    const newIndex = questions.findIndex((q) => q.id === over.id);
+    if (oldIndex < 0 || newIndex < 0) return;
+    const reordered = arrayMove(questions, oldIndex, newIndex);
+    setQuestions(reordered.map((q, i) => ({ ...q, position: i })));
+    await Promise.all(
+      reordered.map((q, i) =>
+        supabase
+          .from("questions")
+          .update({ position: i })
+          .eq("id", q.id),
+      ),
+    );
+  }
 
   useEffect(() => {
     if (!quizId) return;
@@ -401,7 +480,7 @@ export default function QuizEditorPage() {
       />
 
       <div className="w-full max-w-3xl glass rounded-3xl p-5">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-4">
           <h3 className="text-xs uppercase tracking-wider text-white/40">
             עיצוב החידון
           </h3>
@@ -414,70 +493,181 @@ export default function QuizEditorPage() {
             </button>
           )}
         </div>
-        <div className="flex flex-wrap items-end gap-5">
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs text-white/50">צבע ראשי</span>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                value={primaryColor}
-                onChange={(e) => updateDesign({ primary: e.target.value })}
-                onBlur={() => saveDesign(design)}
-                className="h-10 w-14 cursor-pointer rounded-xl border border-white/10 bg-transparent"
-              />
-              <span className="font-mono text-sm text-white/70">
-                {primaryColor.toUpperCase()}
-              </span>
-            </div>
-          </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs text-white/50">צבע משני</span>
-            <div className="flex items-center gap-2">
-              <input
-                type="color"
-                value={secondaryColor}
-                onChange={(e) => updateDesign({ secondary: e.target.value })}
-                onBlur={() => saveDesign(design)}
-                className="h-10 w-14 cursor-pointer rounded-xl border border-white/10 bg-transparent"
-              />
-              <span className="font-mono text-sm text-white/70">
-                {secondaryColor.toUpperCase()}
-              </span>
-            </div>
-          </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-xs text-white/50">
-              טיימר ברירת מחדל (שניות)
-            </span>
-            <input
-              type="number"
-              min="0"
-              step="5"
-              defaultValue={design.default_time_limit ?? ""}
-              onBlur={(e) => {
-                const v = e.target.value.trim();
-                const num = v === "" ? null : Math.max(0, parseInt(v, 10) || 0);
-                const next = {
-                  ...design,
-                  default_time_limit: num,
-                } as DesignSettings;
-                setDesign(next);
-                saveDesign(next);
-              }}
-              placeholder="ללא"
-              className="input-surface rounded-xl px-3 py-2 w-24 text-center text-white"
-            />
-          </label>
-          <div className="flex flex-col gap-1.5">
-            <span className="text-xs text-white/50">תצוגה מקדימה</span>
-            <div className="flex items-center gap-3">
-              <div className="gradient-bg brand-glow rounded-full px-5 py-2 text-sm font-semibold text-white">
-                כפתור
+
+        {/* Tab strip */}
+        <div className="flex gap-1 mb-5 border-b border-white/10">
+          {(
+            [
+              { id: "presets", label: "פריסטים" },
+              { id: "colors", label: "צבעים וטיימר" },
+              { id: "brand", label: "מותג" },
+            ] as const
+          ).map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setDesignTab(t.id)}
+              className={`px-4 py-2 text-sm transition-colors border-b-2 -mb-px ${
+                designTab === t.id
+                  ? "border-(--accent-from) text-white"
+                  : "border-transparent text-white/50 hover:text-white/80"
+              }`}
+              style={
+                designTab === t.id
+                  ? { borderBottomColor: design.primary ?? DEFAULT_PRIMARY }
+                  : undefined
+              }
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {designTab === "presets" && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {THEME_PRESETS.map((preset) => {
+              const isActive =
+                design.primary === preset.settings.primary &&
+                design.secondary === preset.settings.secondary;
+              return (
+                <button
+                  key={preset.id}
+                  onClick={() => {
+                    const next: DesignSettings = {
+                      ...design,
+                      primary: preset.settings.primary,
+                      secondary: preset.settings.secondary,
+                    };
+                    setDesign(next);
+                    saveDesign(next);
+                  }}
+                  className={`rounded-2xl border-2 p-3 text-right transition-colors ${
+                    isActive
+                      ? "border-white"
+                      : "border-white/10 hover:border-white/30"
+                  }`}
+                >
+                  <div
+                    className="h-10 w-full rounded-lg mb-2"
+                    style={{
+                      background: `linear-gradient(135deg, ${preset.settings.primary}, ${preset.settings.secondary})`,
+                    }}
+                  />
+                  <div className="text-sm font-semibold text-white">
+                    {preset.name}
+                  </div>
+                  <div className="text-xs text-white/50">
+                    {preset.description}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {designTab === "colors" && (
+          <div className="flex flex-wrap items-end gap-5">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs text-white/50">צבע ראשי</span>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={primaryColor}
+                  onChange={(e) =>
+                    updateDesign({ primary: e.target.value })
+                  }
+                  onBlur={() => saveDesign(design)}
+                  className="h-10 w-14 cursor-pointer rounded-xl border border-white/10 bg-transparent"
+                />
+                <span className="font-mono text-sm text-white/70">
+                  {primaryColor.toUpperCase()}
+                </span>
               </div>
-              <div className="gradient-text text-xl font-bold">כותרת</div>
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs text-white/50">צבע משני</span>
+              <div className="flex items-center gap-2">
+                <input
+                  type="color"
+                  value={secondaryColor}
+                  onChange={(e) =>
+                    updateDesign({ secondary: e.target.value })
+                  }
+                  onBlur={() => saveDesign(design)}
+                  className="h-10 w-14 cursor-pointer rounded-xl border border-white/10 bg-transparent"
+                />
+                <span className="font-mono text-sm text-white/70">
+                  {secondaryColor.toUpperCase()}
+                </span>
+              </div>
+            </label>
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs text-white/50">
+                טיימר ברירת מחדל (שניות)
+              </span>
+              <input
+                type="number"
+                min="0"
+                step="5"
+                defaultValue={design.default_time_limit ?? ""}
+                onBlur={(e) => {
+                  const v = e.target.value.trim();
+                  const num =
+                    v === "" ? null : Math.max(0, parseInt(v, 10) || 0);
+                  const next = {
+                    ...design,
+                    default_time_limit: num,
+                  } as DesignSettings;
+                  setDesign(next);
+                  saveDesign(next);
+                }}
+                placeholder="ללא"
+                className="input-surface rounded-xl px-3 py-2 w-24 text-center text-white"
+              />
+            </label>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-xs text-white/50">תצוגה מקדימה</span>
+              <div className="flex items-center gap-3">
+                <div className="gradient-bg brand-glow rounded-full px-5 py-2 text-sm font-semibold text-white">
+                  כפתור
+                </div>
+                <div className="gradient-text text-xl font-bold">כותרת</div>
+              </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {designTab === "brand" && (
+          <div className="flex flex-wrap gap-6">
+            <div className="flex flex-col gap-2">
+              <span className="text-xs text-white/50">לוגו (פינה עליונה)</span>
+              <ImageUpload
+                value={design.logo_url ?? null}
+                onChange={(url) => {
+                  const next = { ...design, logo_url: url };
+                  setDesign(next);
+                  saveDesign(next);
+                }}
+                label="+ העלאת לוגו"
+                previewClass="max-h-24"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <span className="text-xs text-white/50">
+                תמונת רקע (מחליפה את הגרדיאנט)
+              </span>
+              <ImageUpload
+                value={design.background_image_url ?? null}
+                onChange={(url) => {
+                  const next = { ...design, background_image_url: url };
+                  setDesign(next);
+                  saveDesign(next);
+                }}
+                label="+ העלאת רקע"
+                previewClass="max-h-24"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {error && (
@@ -491,12 +681,36 @@ export default function QuizEditorPage() {
           </p>
         )}
 
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext
+            items={questions.map((q) => q.id)}
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="flex flex-col gap-4">
         {questions.map((q, idx) => (
-          <div key={q.id} className="glass rounded-3xl p-5 sm:p-6">
+          <SortableQuestion key={q.id} id={q.id}>
+            {({ attributes, listeners }) => (
+          <div className="glass rounded-3xl p-5 sm:p-6">
             <header className="flex items-center justify-between gap-2 mb-3">
-              <h3 className="text-xs uppercase tracking-wider text-white/40">
-                שאלה {idx + 1}
-              </h3>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  {...attributes}
+                  {...listeners}
+                  className="touch-none cursor-grab active:cursor-grabbing text-white/40 hover:text-white px-1"
+                  aria-label="גרור לסידור מחדש"
+                  title="גרור לסידור"
+                >
+                  ⋮⋮
+                </button>
+                <h3 className="text-xs uppercase tracking-wider text-white/40">
+                  שאלה {idx + 1}
+                </h3>
+              </div>
               <button
                 onClick={() => deleteQuestion(q.id)}
                 className="text-xs text-rose-300 hover:text-rose-200"
@@ -683,7 +897,12 @@ export default function QuizEditorPage() {
               </p>
             )}
           </div>
+            )}
+          </SortableQuestion>
         ))}
+            </div>
+          </SortableContext>
+        </DndContext>
 
         <button
           onClick={addQuestion}
