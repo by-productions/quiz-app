@@ -16,6 +16,12 @@ export const THEME_PRESETS: ThemePreset[] = [
     settings: { primary: "#8b5cf6", secondary: "#ec4899" },
   },
   {
+    id: "csl",
+    name: "CSL",
+    description: "אדום מותגי",
+    settings: { primary: "#e4002b", secondary: "#ff4d6d" },
+  },
+  {
     id: "corporate",
     name: "קורפורייט",
     description: "כחול וטורקיז",

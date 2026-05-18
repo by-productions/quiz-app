@@ -25,11 +25,14 @@ export default function Home() {
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-14 p-8">
       <header className="text-center">
-        <h1 className="text-5xl sm:text-7xl font-bold tracking-tight gradient-text leading-tight">
-          חידון אינטראקטיבי
+        <h1
+          dir="ltr"
+          className="text-6xl sm:text-8xl font-extrabold tracking-tight gradient-text leading-none"
+        >
+          B.Y. QUIZ
         </h1>
-        <p className="mt-4 text-lg sm:text-xl text-white/60">
-          חוויית חידון בזמן אמת לכנסים ואירועים
+        <p className="mt-5 text-lg sm:text-xl text-white/60">
+          פלטפורמת חידונים אינטראקטיבית לכנסים ואירועים עסקיים
         </p>
       </header>
 

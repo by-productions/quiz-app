@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "חידון אינטראקטיבי",
-  description: "פלטפורמת חידונים אינטראקטיבית בסגנון Kahoot",
+  title: "B.Y. QUIZ — פלטפורמת חידונים אינטראקטיבית",
+  description:
+    "פלטפורמת חידונים בזמן אמת לכנסים ואירועים עסקיים — מאת B.Y Productions",
 };
 
 export default function RootLayout({
