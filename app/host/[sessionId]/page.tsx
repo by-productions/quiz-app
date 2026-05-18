@@ -376,7 +376,7 @@ export default function HostSessionPage() {
   return (
     <main
       style={designStyle(design)}
-      className="flex flex-1 flex-col items-center gap-10 p-6 sm:p-10"
+      className="flex flex-1 flex-col items-center justify-center gap-10 p-6 sm:p-10"
     >
       <Backdrop design={design} />
       <LogoChip design={design} />
@@ -514,8 +514,8 @@ export default function HostSessionPage() {
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
-              className="text-center font-bold text-white leading-tight"
-              style={{ fontSize: "clamp(1.75rem, 4.5vw, 3.5rem)" }}
+              className="text-center font-bold text-white leading-tight max-w-5xl"
+              style={{ fontSize: "clamp(2.25rem, 6vw, 5rem)" }}
             >
               {currentQuestion.question_text}
             </motion.h2>
@@ -626,65 +626,61 @@ export default function HostSessionPage() {
               );
             })()}
 
-            {currentQuestion.type === "free_response" &&
-              session.state === "question_active" && (
-                <div className="glass-strong rounded-3xl px-10 py-8 text-center">
-                  <p className="text-xs uppercase tracking-wider text-white/50">
-                    תגובות שהתקבלו
-                  </p>
-                  <p
-                    className="mt-2 font-extrabold gradient-text tabular-nums"
-                    style={{ fontSize: "clamp(3.5rem, 10vw, 7rem)", lineHeight: 1 }}
-                  >
-                    {freeResponses.length}
-                  </p>
-                </div>
-              )}
-
-            {currentQuestion.type === "free_response" &&
-              session.state === "showing_results" && (
-                <div className="w-full max-w-3xl glass rounded-3xl p-5 max-h-[60vh] overflow-y-auto">
+            {currentQuestion.type === "free_response" && (
+              <div className="w-full max-w-3xl flex flex-col items-center gap-3">
+                <p className="text-xs uppercase tracking-[0.2em] text-white/40">
+                  {freeResponses.length} תגובות
+                </p>
+                <div className="w-full glass rounded-3xl p-5 max-h-[55vh] overflow-y-auto">
                   {freeResponses.length === 0 ? (
-                    <p className="text-white/50 text-center py-6">
-                      לא התקבלו תגובות
+                    <p className="text-white/50 text-center py-8 text-lg">
+                      ממתינים לתגובות…
                     </p>
                   ) : (
-                    <ul className="space-y-2">
-                      {responses
-                        .filter(
-                          (r) => typeof r.answer_data.text === "string",
-                        )
-                        .map((r, i) => (
-                          <li
-                            key={i}
-                            className="flex gap-3 items-start rounded-2xl bg-white/5 px-4 py-3 border border-white/5"
-                          >
-                            {r.avatar_url ? (
-                              /* eslint-disable-next-line @next/next/no-img-element */
-                              <img
-                                src={r.avatar_url}
-                                alt=""
-                                className="h-9 w-9 rounded-full object-cover shrink-0"
-                              />
-                            ) : (
-                              <span className="h-9 w-9 rounded-full bg-white/10 flex items-center justify-center text-sm font-bold text-white shrink-0">
-                                {r.nickname.slice(0, 1)}
-                              </span>
-                            )}
-                            <div className="flex-1">
-                              <div className="text-xs uppercase tracking-wider text-white/40">
-                                {r.nickname}
+                    <ul className="space-y-2.5">
+                      <AnimatePresence initial={false}>
+                        {responses
+                          .filter(
+                            (r) => typeof r.answer_data.text === "string",
+                          )
+                          .map((r, i) => (
+                            <motion.li
+                              key={`${r.participant_id}-${i}`}
+                              layout
+                              initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0 }}
+                              transition={{ duration: 0.3 }}
+                              className="flex gap-3 items-start rounded-2xl bg-white/5 px-4 py-3 border border-white/10"
+                            >
+                              {r.avatar_url ? (
+                                /* eslint-disable-next-line @next/next/no-img-element */
+                                <img
+                                  src={r.avatar_url}
+                                  alt=""
+                                  className="h-11 w-11 rounded-full object-cover shrink-0"
+                                />
+                              ) : (
+                                <span className="h-11 w-11 rounded-full bg-white/10 flex items-center justify-center text-base font-bold text-white shrink-0">
+                                  {r.nickname.slice(0, 1)}
+                                </span>
+                              )}
+                              <div className="flex-1">
+                                <div className="text-xs uppercase tracking-wider text-white/50">
+                                  {r.nickname}
+                                </div>
+                                <div className="mt-1 text-xl text-white">
+                                  {r.answer_data.text}
+                                </div>
                               </div>
-                              <div className="mt-0.5 text-lg text-white">
-                                {r.answer_data.text}
-                              </div>
-                            </div>
-                          </li>
-                        ))}
+                            </motion.li>
+                          ))}
+                      </AnimatePresence>
                     </ul>
                   )}
                 </div>
-              )}
+              </div>
+            )}
 
             {currentQuestion.type === "word_cloud" && (
               <WordCloudView entries={aggregateWords(responses)} />
@@ -758,59 +754,58 @@ export default function HostSessionPage() {
                 count: ratings.filter((r) => r === score).length,
               }));
               const max = Math.max(1, ...distribution.map((d) => d.count));
-              if (session.state === "question_active") {
-                return (
-                  <div className="glass-strong rounded-3xl px-10 py-8 text-center">
-                    <p className="text-xs uppercase tracking-wider text-white/50">
-                      דירוגים שהתקבלו
-                    </p>
-                    <p
-                      className="mt-2 font-extrabold gradient-text tabular-nums"
-                      style={{
-                        fontSize: "clamp(3.5rem, 10vw, 7rem)",
-                        lineHeight: 1,
-                      }}
-                    >
-                      {total}
-                    </p>
-                  </div>
-                );
-              }
               return (
-                <div className="w-full max-w-2xl glass rounded-3xl p-6 flex flex-col gap-4">
-                  <div className="flex items-baseline justify-center gap-3">
-                    <span
+                <div className="w-full max-w-3xl glass rounded-3xl p-8 flex flex-col gap-7">
+                  <div className="flex items-baseline justify-center gap-4">
+                    <motion.span
+                      key={`avg-${avg.toFixed(1)}`}
+                      initial={{ scale: 0.7, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      transition={{ duration: 0.3 }}
                       className="font-extrabold gradient-text tabular-nums"
                       style={{
-                        fontSize: "clamp(2.5rem, 8vw, 5rem)",
+                        fontSize: "clamp(4rem, 11vw, 7rem)",
                         lineHeight: 1,
                       }}
                     >
                       {avg.toFixed(1)}
+                    </motion.span>
+                    <span className="text-white/50 text-3xl sm:text-4xl">
+                      / 5
                     </span>
-                    <span className="text-white/50">/ 5</span>
-                    <span className="text-white/40 text-sm">
+                    <span className="text-white/40 text-lg sm:text-xl">
                       ({total} דירוגים)
                     </span>
                   </div>
-                  <div className="flex flex-col gap-2">
+                  <div className="flex flex-col gap-3.5">
                     {distribution.map((d) => (
                       <div
                         key={d.score}
-                        className="flex items-center gap-3"
+                        className="flex items-center gap-4"
                       >
-                        <span className="w-6 text-center text-white/70 font-bold">
+                        <span className="w-8 text-center text-white/80 text-2xl font-bold tabular-nums">
                           {d.score}
                         </span>
-                        <div className="flex-1 h-3 rounded-full bg-white/10 overflow-hidden">
-                          <div
+                        <div className="flex-1 h-6 rounded-full bg-white/10 overflow-hidden">
+                          <motion.div
                             className="h-full gradient-bg"
-                            style={{ width: `${(d.count / max) * 100}%` }}
+                            initial={{ width: 0 }}
+                            animate={{ width: `${(d.count / max) * 100}%` }}
+                            transition={{
+                              duration: 0.5,
+                              ease: "easeOut",
+                            }}
                           />
                         </div>
-                        <span className="w-10 text-left text-white/60 text-sm tabular-nums">
+                        <motion.span
+                          key={`d-${d.score}-${d.count}`}
+                          initial={{ scale: 0.6, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ duration: 0.2 }}
+                          className="w-12 text-left text-white text-xl font-semibold tabular-nums"
+                        >
                           {d.count}
-                        </span>
+                        </motion.span>
                       </div>
                     ))}
                   </div>
