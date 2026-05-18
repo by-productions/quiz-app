@@ -520,85 +520,111 @@ export default function HostSessionPage() {
               {currentQuestion.question_text}
             </motion.h2>
 
-            {currentQuestion.type === "multiple_choice" && (
-              <div className="grid w-full gap-4 sm:grid-cols-2">
-                {currentQuestion.answer_options.map((opt, idx) => {
-                  const style = getOptionStyle(idx);
-                  const count = responseCounts[opt.id] ?? 0;
-                  const totalVotes = Object.values(responseCounts).reduce(
-                    (a, b) => a + b,
-                    0,
-                  );
-                  const pct =
-                    totalVotes > 0
-                      ? Math.round((count / totalVotes) * 100)
-                      : 0;
-                  const isResults = session.state === "showing_results";
-                  const isCorrect = opt.is_correct;
-                  return (
-                    <motion.div
-                      key={opt.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ duration: 0.3, delay: idx * 0.08 }}
-                      className={`relative overflow-hidden rounded-3xl bg-gradient-to-br ${style.gradient} p-6 sm:p-7 ${
-                        isResults && !isCorrect ? "opacity-50" : ""
-                      } ${
-                        isResults && isCorrect
-                          ? "ring-4 ring-white/80 ring-offset-4 ring-offset-transparent"
-                          : ""
-                      }`}
-                      style={{
-                        boxShadow: `0 12px 40px -8px ${style.hex}66`,
-                      }}
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="h-12 w-12 sm:h-14 sm:w-14 shrink-0 text-white/95">
-                          <OptionShape
-                            shape={style.shape}
-                            className="h-full w-full"
-                          />
-                        </div>
-                        {opt.image_url && (
-                          /* eslint-disable-next-line @next/next/no-img-element */
-                          <img
-                            src={opt.image_url}
-                            alt=""
-                            className="h-16 w-16 sm:h-20 sm:w-20 rounded-xl object-cover shrink-0"
-                          />
+            {currentQuestion.type === "multiple_choice" && (() => {
+              const isResults = session.state === "showing_results";
+              const totalParticipants = Math.max(participants.length, 1);
+              const anyCorrectMarked = currentQuestion.answer_options.some(
+                (o) => o.is_correct,
+              );
+              return (
+                <div
+                  className="grid w-full max-w-4xl gap-3 sm:gap-5 items-end"
+                  style={{
+                    gridTemplateColumns: `repeat(${currentQuestion.answer_options.length}, minmax(0, 1fr))`,
+                    height: "clamp(280px, 45vh, 460px)",
+                  }}
+                >
+                  {currentQuestion.answer_options.map((opt, idx) => {
+                    const style = getOptionStyle(idx);
+                    const count = responseCounts[opt.id] ?? 0;
+                    const pct = Math.min(
+                      100,
+                      (count / totalParticipants) * 100,
+                    );
+                    const isCorrect = opt.is_correct;
+                    const dim = isResults && anyCorrectMarked && !isCorrect;
+                    return (
+                      <div
+                        key={opt.id}
+                        className="flex flex-col items-center justify-end h-full"
+                      >
+                        {isResults && isCorrect && (
+                          <motion.div
+                            initial={{ opacity: 0, y: -10, scale: 0.7 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            transition={{ duration: 0.3, delay: 0.3 }}
+                            className="mb-2 rounded-full bg-white text-emerald-700 px-3 py-0.5 text-xs font-bold whitespace-nowrap"
+                          >
+                            ✓ תשובה נכונה
+                          </motion.div>
                         )}
-                        <div className="flex-1 text-xl sm:text-2xl font-bold text-white drop-shadow">
-                          {opt.text || (opt.image_url ? "" : `אפשרות ${idx + 1}`)}
-                        </div>
-                        <div className="text-3xl sm:text-4xl font-extrabold text-white tabular-nums drop-shadow">
+
+                        <motion.div
+                          key={`count-${count}`}
+                          initial={{ scale: 0.5, opacity: 0 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ duration: 0.25 }}
+                          className={`text-2xl sm:text-3xl font-extrabold text-white tabular-nums mb-2 drop-shadow ${
+                            dim ? "opacity-40" : ""
+                          }`}
+                        >
                           {count}
+                        </motion.div>
+
+                        <div className="w-full flex-1 flex items-end min-h-[40px]">
+                          <motion.div
+                            className={`w-full rounded-t-2xl bg-gradient-to-t ${style.gradient}`}
+                            initial={{ height: 0 }}
+                            animate={{ height: `${pct}%` }}
+                            transition={{
+                              duration: 0.6,
+                              ease: "easeOut",
+                              type: "spring",
+                              stiffness: 80,
+                              damping: 14,
+                            }}
+                            style={{
+                              boxShadow: `0 -10px 30px -10px ${style.hex}88`,
+                              opacity: dim ? 0.35 : 1,
+                              outline:
+                                isResults && isCorrect
+                                  ? "3px solid rgba(255,255,255,0.9)"
+                                  : "none",
+                              outlineOffset: isResults && isCorrect ? "2px" : 0,
+                            }}
+                          />
+                        </div>
+
+                        <div
+                          className={`mt-3 flex flex-col items-center gap-1.5 ${
+                            dim ? "opacity-50" : ""
+                          }`}
+                        >
+                          <div className="h-7 w-7 sm:h-9 sm:w-9 text-white/95">
+                            <OptionShape
+                              shape={style.shape}
+                              className="h-full w-full"
+                            />
+                          </div>
+                          {opt.image_url && (
+                            /* eslint-disable-next-line @next/next/no-img-element */
+                            <img
+                              src={opt.image_url}
+                              alt=""
+                              className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg object-cover"
+                            />
+                          )}
+                          <div className="text-xs sm:text-sm font-semibold text-white text-center leading-tight line-clamp-2 max-w-full px-1">
+                            {opt.text ||
+                              (opt.image_url ? "" : `אפשרות ${idx + 1}`)}
+                          </div>
                         </div>
                       </div>
-                      {isResults && (
-                        <div className="mt-4 h-1.5 w-full overflow-hidden rounded-full bg-white/20">
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${pct}%` }}
-                            transition={{ duration: 0.8, ease: "easeOut" }}
-                            className="h-full bg-white/95"
-                          />
-                        </div>
-                      )}
-                      {isResults && isCorrect && (
-                        <motion.div
-                          initial={{ opacity: 0, scale: 0.5 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ duration: 0.3, delay: 0.4 }}
-                          className="absolute top-3 left-3 rounded-full bg-white text-emerald-700 px-2.5 py-0.5 text-xs font-bold"
-                        >
-                          תשובה נכונה ✓
-                        </motion.div>
-                      )}
-                    </motion.div>
-                  );
-                })}
-              </div>
-            )}
+                    );
+                  })}
+                </div>
+              );
+            })()}
 
             {currentQuestion.type === "free_response" &&
               session.state === "question_active" && (
