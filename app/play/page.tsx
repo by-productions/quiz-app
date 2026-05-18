@@ -1,14 +1,33 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 export default function PlayJoinPage() {
+  return (
+    <Suspense
+      fallback={
+        <main className="flex flex-1 items-center justify-center p-8 text-white/50">
+          טוען…
+        </main>
+      }
+    >
+      <PlayJoinForm />
+    </Suspense>
+  );
+}
+
+function PlayJoinForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialCode = (searchParams?.get("code") ?? "")
+    .replace(/\D/g, "")
+    .slice(0, 6);
+
   const supabase = useMemo(() => createClient(), []);
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(initialCode);
   const [nickname, setNickname] = useState("");
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -69,12 +88,19 @@ export default function PlayJoinPage() {
     );
   }
 
+  const hasPrefilledCode = initialCode.length === 6;
+
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-8 p-6">
       <header className="text-center">
         <h1 className="text-4xl sm:text-5xl font-bold gradient-text">
           הצטרפות למשחק
         </h1>
+        {hasPrefilledCode && (
+          <p className="mt-2 text-sm text-white/50">
+            ✓ קוד נטען מהקישור — רק תני כינוי
+          </p>
+        )}
       </header>
 
       <form
@@ -93,7 +119,7 @@ export default function PlayJoinPage() {
             maxLength={6}
             className="input-surface rounded-2xl px-5 py-4 text-4xl font-mono tracking-[0.3em] text-center"
             placeholder="000000"
-            autoFocus
+            autoFocus={!hasPrefilledCode}
           />
         </label>
         <label className="flex flex-col gap-2">
@@ -107,6 +133,7 @@ export default function PlayJoinPage() {
             maxLength={30}
             className="input-surface rounded-2xl px-5 py-3 text-lg"
             placeholder="השם שלך"
+            autoFocus={hasPrefilledCode}
           />
         </label>
         {error && <p className="text-rose-400 text-sm text-center">{error}</p>}

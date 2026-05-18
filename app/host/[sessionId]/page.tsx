@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
+import { QRCodeSVG } from "qrcode.react";
 import { createClient } from "@/lib/supabase/client";
 import type {
   GameSession,
@@ -81,7 +82,12 @@ export default function HostSessionPage() {
   const [responses, setResponses] = useState<ResponseRow[]>([]);
   const [responseTick, setResponseTick] = useState(0);
   const [design, setDesign] = useState<DesignSettings | null>(null);
+  const [origin, setOrigin] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") setOrigin(window.location.origin);
+  }, []);
 
   useEffect(() => {
     if (!sessionId) return;
@@ -379,18 +385,38 @@ export default function HostSessionPage() {
           <p className="text-sm uppercase tracking-[0.2em] text-white/40">
             הצטרפות
           </p>
-          <motion.p
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.5, ease: "easeOut" }}
-            className="font-mono font-extrabold tracking-[0.18em] gradient-text"
-            style={{ fontSize: "clamp(4rem, 18vw, 12rem)", lineHeight: 1 }}
-          >
-            {session.join_code}
-          </motion.p>
-          <p className="text-white/60 text-sm sm:text-base">
-            פתחו <span className="font-mono text-white">/play</span> והקלידו את
-            הקוד
+
+          <div className="flex flex-col md:flex-row items-center gap-6 md:gap-12">
+            <motion.p
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="font-mono font-extrabold tracking-[0.18em] gradient-text"
+              style={{ fontSize: "clamp(3.5rem, 14vw, 9rem)", lineHeight: 1 }}
+            >
+              {session.join_code}
+            </motion.p>
+
+            {origin && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.4, delay: 0.15 }}
+                className="bg-white p-3 sm:p-4 rounded-2xl shadow-2xl"
+              >
+                <QRCodeSVG
+                  value={`${origin}/play?code=${session.join_code}`}
+                  size={180}
+                  level="M"
+                  marginSize={0}
+                />
+              </motion.div>
+            )}
+          </div>
+
+          <p className="text-white/60 text-sm sm:text-base text-center">
+            סרקו את ה-QR או היכנסו ל-
+            <span className="font-mono text-white">/play</span> והקלידו את הקוד
           </p>
 
           <div className="glass rounded-3xl p-6 w-full max-w-md">
