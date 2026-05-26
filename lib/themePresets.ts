@@ -10,16 +10,28 @@ export type ThemePreset = {
 
 export const THEME_PRESETS: ThemePreset[] = [
   {
-    id: "default",
-    name: "ברירת מחדל",
-    description: "סגול וורוד",
-    settings: { primary: "#8b5cf6", secondary: "#ec4899" },
+    id: "andembry",
+    name: "Andembry — Beyond the Attack",
+    description: "טורקיז וכחול נייבי",
+    settings: { primary: "#04b49d", secondary: "#173d6e" },
   },
   {
     id: "csl",
     name: "CSL",
     description: "אדום מותגי",
     settings: { primary: "#e4002b", secondary: "#ff4d6d" },
+  },
+  {
+    id: "csl-gold",
+    name: "CSL זהב",
+    description: "נייבי וזהב",
+    settings: { primary: "#173d6e", secondary: "#f0b020" },
+  },
+  {
+    id: "violet-pink",
+    name: "סגול וורוד",
+    description: "ברירת מחדל ישנה",
+    settings: { primary: "#8b5cf6", secondary: "#ec4899" },
   },
   {
     id: "corporate",

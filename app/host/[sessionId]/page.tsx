@@ -348,8 +348,12 @@ export default function HostSessionPage() {
   if (error) {
     return (
       <main className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
-        <p className="text-rose-400">{error}</p>
-        <Link href="/host" className="text-white/60 hover:text-white">
+        <p style={{ color: "var(--red)" }}>{error}</p>
+        <Link
+          href="/host"
+          className="hover:opacity-70"
+          style={{ color: "var(--foreground-muted)" }}
+        >
           חזרה לרשימת החידונים
         </Link>
       </main>
@@ -358,7 +362,10 @@ export default function HostSessionPage() {
 
   if (!session) {
     return (
-      <main className="flex flex-1 items-center justify-center p-8 text-white/50">
+      <main
+        className="flex flex-1 items-center justify-center p-8"
+        style={{ color: "var(--foreground-faint)" }}
+      >
         טוען…
       </main>
     );
@@ -376,7 +383,7 @@ export default function HostSessionPage() {
   return (
     <main
       style={designStyle(design)}
-      className="flex flex-1 flex-col items-center justify-center gap-10 p-6 sm:p-10"
+      className="dark-stage flex flex-1 flex-col items-center justify-center gap-10 p-6 sm:p-10"
     >
       <Backdrop design={design} />
       <LogoChip design={design} />

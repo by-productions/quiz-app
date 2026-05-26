@@ -238,8 +238,12 @@ export default function PlaySessionPage() {
   if (error) {
     return (
       <main className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
-        <p className="text-rose-400">{error}</p>
-        <Link href="/play" className="text-white/60 hover:text-white">
+        <p style={{ color: "var(--red)" }}>{error}</p>
+        <Link
+          href="/play"
+          className="hover:opacity-70"
+          style={{ color: "var(--foreground-muted)" }}
+        >
           חזרה
         </Link>
       </main>
@@ -248,7 +252,10 @@ export default function PlaySessionPage() {
 
   if (!session) {
     return (
-      <main className="flex flex-1 items-center justify-center p-8 text-white/50">
+      <main
+        className="flex flex-1 items-center justify-center p-8"
+        style={{ color: "var(--foreground-faint)" }}
+      >
         טוען…
       </main>
     );
@@ -257,7 +264,7 @@ export default function PlaySessionPage() {
   return (
     <main
       style={designStyle(design)}
-      className="flex flex-1 flex-col items-center justify-center gap-6 p-5"
+      className="dark-stage flex flex-1 flex-col items-center justify-center gap-6 p-5"
     >
       <Backdrop design={design} />
       <LogoChip design={design} />

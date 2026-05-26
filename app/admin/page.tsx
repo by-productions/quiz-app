@@ -58,47 +58,58 @@ export default function AdminIndexPage() {
   }
 
   return (
-    <main className="flex flex-1 flex-col items-center gap-10 p-8">
+    <main className="flex flex-1 flex-col items-center gap-10 p-8 pt-24">
       <header className="text-center">
-        <h1 className="text-4xl sm:text-5xl font-bold gradient-text">
-          ממשק יצירה
+        <span className="eyebrow">ניהול תוכן</span>
+        <h1 className="section-title mt-4 text-4xl sm:text-5xl">
+          ממשק <span className="accent">יצירה</span>
         </h1>
-        <p className="mt-3 text-white/60">החידונים שלי</p>
+        <p className="mt-3" style={{ color: "var(--foreground-muted)" }}>
+          החידונים שלי
+        </p>
       </header>
 
       <button
         onClick={createQuiz}
         disabled={creating}
-        className="gradient-bg brand-glow rounded-full px-7 py-3 font-bold text-white hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100"
+        className="cta-red rounded-full px-8 py-3.5 text-base font-extrabold disabled:opacity-50"
+        style={{ fontFamily: "var(--font-heebo)" }}
       >
         {creating ? "יוצרת…" : "+ חידון חדש"}
       </button>
 
-      {error && <p className="text-rose-400">{error}</p>}
+      {error && <p style={{ color: "var(--red)" }}>{error}</p>}
 
       <div className="grid w-full max-w-2xl gap-3">
         {quizzes === null && (
-          <p className="text-center text-white/50">טוען…</p>
+          <p className="text-center" style={{ color: "var(--foreground-faint)" }}>
+            טוען…
+          </p>
         )}
         {quizzes !== null && quizzes.length === 0 && (
-          <p className="text-center text-white/50 glass rounded-2xl p-8">
-            עדיין אין חידונים. לחצי "חידון חדש" כדי להתחיל.
+          <p
+            className="glass rounded-2xl p-8 text-center"
+            style={{ color: "var(--foreground-muted)" }}
+          >
+            עדיין אין חידונים. לחצי &quot;חידון חדש&quot; כדי להתחיל.
           </p>
         )}
         {quizzes?.map((q) => (
           <div
             key={q.id}
-            className="flex items-center justify-between gap-3 glass glass-hover rounded-2xl px-6 py-4"
+            className="glass glass-hover flex items-center justify-between gap-3 rounded-2xl px-6 py-4"
           >
             <Link
               href={`/admin/${q.id}`}
-              className="flex-1 text-xl font-semibold text-white"
+              className="flex-1 text-xl font-bold"
+              style={{ color: "var(--navy)", fontFamily: "var(--font-heebo)" }}
             >
               {q.title}
             </Link>
             <button
               onClick={() => deleteQuiz(q.id)}
-              className="text-sm text-rose-300 hover:text-rose-200"
+              className="text-sm font-bold transition-colors hover:opacity-70"
+              style={{ color: "var(--red)" }}
               aria-label="מחיקה"
             >
               מחיקה
@@ -107,7 +118,11 @@ export default function AdminIndexPage() {
         ))}
       </div>
 
-      <Link href="/" className="mt-2 text-sm text-white/50 hover:text-white">
+      <Link
+        href="/"
+        className="mt-2 text-sm transition-colors hover:opacity-70"
+        style={{ color: "var(--foreground-muted)" }}
+      >
         חזרה לדף הבית
       </Link>
     </main>

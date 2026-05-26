@@ -54,22 +54,34 @@ export default function HostIndexPage() {
   }
 
   return (
-    <main className="flex flex-1 flex-col items-center gap-10 p-8">
+    <main className="flex flex-1 flex-col items-center gap-10 p-8 pt-24">
       <header className="text-center">
-        <h1 className="text-4xl sm:text-5xl font-bold gradient-text">
-          ממשק הנחיה
+        <span className="eyebrow">מסך גדול</span>
+        <h1 className="section-title mt-4 text-4xl sm:text-5xl">
+          ממשק <span className="accent">הנחיה</span>
         </h1>
-        <p className="mt-3 text-white/60">בחרי חידון להתחלת משחק חדש</p>
+        <p className="mt-3" style={{ color: "var(--foreground-muted)" }}>
+          בחרי חידון להתחלת משחק חדש
+        </p>
       </header>
 
       <div className="grid w-full max-w-2xl gap-3">
         {quizzes === null && (
-          <p className="text-center text-white/50">טוען…</p>
+          <p className="text-center" style={{ color: "var(--foreground-faint)" }}>
+            טוען…
+          </p>
         )}
         {quizzes !== null && quizzes.length === 0 && (
-          <div className="glass rounded-2xl p-8 text-center text-white/60">
+          <div
+            className="glass rounded-2xl p-8 text-center"
+            style={{ color: "var(--foreground-muted)" }}
+          >
             עדיין אין חידונים.{" "}
-            <Link href="/admin" className="text-white underline hover:no-underline">
+            <Link
+              href="/admin"
+              className="font-bold underline hover:no-underline"
+              style={{ color: "var(--teal-deep)" }}
+            >
               ליצירת חידון
             </Link>
           </div>
@@ -79,19 +91,31 @@ export default function HostIndexPage() {
             key={q.id}
             disabled={starting}
             onClick={() => startGame(q.id)}
-            className="glass glass-hover rounded-2xl px-6 py-5 text-right disabled:opacity-50 disabled:cursor-not-allowed"
+            className="glass glass-hover rounded-2xl px-6 py-5 text-right disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <div className="text-xl font-semibold text-white">{q.title}</div>
-            <div className="mt-1 text-sm text-white/50">
+            <div
+              className="text-xl font-bold"
+              style={{ color: "var(--navy)", fontFamily: "var(--font-heebo)" }}
+            >
+              {q.title}
+            </div>
+            <div
+              className="mt-1 text-sm"
+              style={{ color: "var(--foreground-muted)" }}
+            >
               לחצי להתחלת משחק חדש ←
             </div>
           </button>
         ))}
       </div>
 
-      {error && <p className="text-rose-400">{error}</p>}
+      {error && <p style={{ color: "var(--red)" }}>{error}</p>}
 
-      <Link href="/" className="mt-2 text-sm text-white/50 hover:text-white">
+      <Link
+        href="/"
+        className="mt-2 text-sm transition-colors hover:opacity-70"
+        style={{ color: "var(--foreground-muted)" }}
+      >
         חזרה לדף הבית
       </Link>
     </main>

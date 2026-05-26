@@ -9,7 +9,10 @@ export default function PlayJoinPage() {
   return (
     <Suspense
       fallback={
-        <main className="flex flex-1 items-center justify-center p-8 text-white/50">
+        <main
+          className="flex flex-1 items-center justify-center p-8"
+          style={{ color: "var(--foreground-faint)" }}
+        >
           טוען…
         </main>
       }
@@ -91,13 +94,17 @@ function PlayJoinForm() {
   const hasPrefilledCode = initialCode.length === 6;
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-8 p-6">
+    <main className="flex flex-1 flex-col items-center justify-center gap-8 p-6 pt-24">
       <header className="text-center">
-        <h1 className="text-4xl sm:text-5xl font-bold gradient-text">
-          הצטרפות למשחק
+        <span className="eyebrow">צריך/ה להזין קוד</span>
+        <h1 className="section-title mt-4 text-4xl sm:text-5xl">
+          הצטרפות <span className="accent">למשחק</span>
         </h1>
         {hasPrefilledCode && (
-          <p className="mt-2 text-sm text-white/50">
+          <p
+            className="mt-2 text-sm"
+            style={{ color: "var(--teal-deep)", fontWeight: 700 }}
+          >
             ✓ קוד נטען מהקישור — רק תני כינוי
           </p>
         )}
@@ -105,10 +112,13 @@ function PlayJoinForm() {
 
       <form
         onSubmit={join}
-        className="glass-strong rounded-3xl p-6 sm:p-8 flex flex-col gap-5 w-full max-w-sm"
+        className="glass-strong flex w-full max-w-sm flex-col gap-5 rounded-3xl p-6 sm:p-8"
       >
         <label className="flex flex-col gap-2">
-          <span className="text-xs uppercase tracking-wider text-white/50">
+          <span
+            className="text-xs font-bold uppercase"
+            style={{ color: "var(--foreground-muted)", letterSpacing: "0.18em" }}
+          >
             קוד משחק
           </span>
           <input
@@ -117,13 +127,17 @@ function PlayJoinForm() {
             value={code}
             onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
             maxLength={6}
-            className="input-surface rounded-2xl px-5 py-4 text-4xl font-mono tracking-[0.3em] text-center"
+            className="input-surface rounded-2xl px-5 py-4 text-center font-mono text-4xl"
+            style={{ letterSpacing: "0.3em" }}
             placeholder="000000"
             autoFocus={!hasPrefilledCode}
           />
         </label>
         <label className="flex flex-col gap-2">
-          <span className="text-xs uppercase tracking-wider text-white/50">
+          <span
+            className="text-xs font-bold uppercase"
+            style={{ color: "var(--foreground-muted)", letterSpacing: "0.18em" }}
+          >
             כינוי
           </span>
           <input
@@ -136,17 +150,29 @@ function PlayJoinForm() {
             autoFocus={hasPrefilledCode}
           />
         </label>
-        {error && <p className="text-rose-400 text-sm text-center">{error}</p>}
+        {error && (
+          <p
+            className="text-center text-sm font-bold"
+            style={{ color: "var(--red)" }}
+          >
+            {error}
+          </p>
+        )}
         <button
           type="submit"
           disabled={joining}
-          className="gradient-bg brand-glow rounded-full px-6 py-4 font-bold text-white text-lg hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:hover:scale-100"
+          className="cta-red rounded-full px-6 py-4 text-lg font-extrabold disabled:opacity-50"
+          style={{ fontFamily: "var(--font-heebo)" }}
         >
           {joining ? "מצטרפת…" : "הצטרפי →"}
         </button>
       </form>
 
-      <Link href="/" className="text-sm text-white/50 hover:text-white">
+      <Link
+        href="/"
+        className="text-sm transition-colors hover:opacity-70"
+        style={{ color: "var(--foreground-muted)" }}
+      >
         חזרה לדף הבית
       </Link>
     </main>

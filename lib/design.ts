@@ -1,8 +1,10 @@
 import type { CSSProperties } from "react";
 import type { DesignSettings } from "./types";
 
-export const DEFAULT_PRIMARY = "#8b5cf6";
-export const DEFAULT_SECONDARY = "#ec4899";
+/** Andembry teal — primary accent across the Beyond-the-Attack brand. */
+export const DEFAULT_PRIMARY = "#04b49d";
+/** Andembry navy — secondary accent that pairs with teal for gradients. */
+export const DEFAULT_SECONDARY = "#173d6e";
 
 /**
  * Returns an inline style with the brand CSS variables set, so any
@@ -19,4 +21,3 @@ export function designStyle(
     ["--accent-to" as string]: secondary,
   } as CSSProperties;
 }
-

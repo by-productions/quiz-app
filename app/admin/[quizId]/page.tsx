@@ -438,7 +438,10 @@ export default function QuizEditorPage() {
 
   if (loading) {
     return (
-      <main className="flex flex-1 items-center justify-center p-8 text-white/50">
+      <main
+        className="flex flex-1 items-center justify-center p-8"
+        style={{ color: "var(--foreground-faint)" }}
+      >
         טוען…
       </main>
     );
@@ -447,8 +450,12 @@ export default function QuizEditorPage() {
   if (!quiz) {
     return (
       <main className="flex flex-1 flex-col items-center justify-center gap-4 p-8">
-        <p className="text-white/70">חידון לא נמצא</p>
-        <Link href="/admin" className="text-white/60 hover:text-white">
+        <p style={{ color: "var(--foreground-muted)" }}>חידון לא נמצא</p>
+        <Link
+          href="/admin"
+          className="hover:opacity-70"
+          style={{ color: "var(--foreground-muted)" }}
+        >
           חזרה לרשימה
         </Link>
       </main>
@@ -463,7 +470,7 @@ export default function QuizEditorPage() {
   return (
     <main
       style={designStyle(design)}
-      className="flex flex-1 flex-col items-center gap-6 p-6 sm:p-8"
+      className="dark-stage flex flex-1 flex-col items-center gap-6 p-6 sm:p-8"
     >
       <div className="w-full max-w-3xl">
         <Link href="/admin" className="text-sm text-white/50 hover:text-white">
