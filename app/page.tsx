@@ -309,8 +309,8 @@ export default function EventHostPage() {
     ? remainingSeconds(session!.question_started_at!, QUESTION_SECONDS, now)
     : 0;
 
-  /** First 2 seconds of a question show the answer cards big — no bars yet. */
-  const REVEAL_MS = 2000;
+  /** First 5 seconds of a question show the answer cards big — no bars yet. */
+  const REVEAL_MS = 5000;
   const questionElapsedMs =
     session?.state === "question_active" && session.question_started_at
       ? now - new Date(session.question_started_at).getTime()
@@ -1007,12 +1007,15 @@ export default function EventHostPage() {
                               />
                             </div>
 
+                            {/* Fixed-height label area so every bar shares
+                                the same baseline regardless of how many
+                                lines the option text wraps into. */}
                             <div
-                              className="mt-4 flex flex-col items-center gap-2.5"
+                              className="mt-4 flex h-[120px] flex-col items-center gap-2.5 sm:h-[140px] md:h-[160px]"
                               style={{ opacity: dim ? 0.5 : 1 }}
                             >
                               <div
-                                className="h-10 w-10 sm:h-12 sm:w-12 md:h-14 md:w-14"
+                                className="h-10 w-10 shrink-0 sm:h-12 sm:w-12 md:h-14 md:w-14"
                                 style={{ color: palette.hex }}
                               >
                                 <OptionShape
