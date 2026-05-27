@@ -309,6 +309,15 @@ export default function EventHostPage() {
     ? remainingSeconds(session!.question_started_at!, QUESTION_SECONDS, now)
     : 0;
 
+  /** First 2 seconds of a question show the answer cards big — no bars yet. */
+  const REVEAL_MS = 2000;
+  const questionElapsedMs =
+    session?.state === "question_active" && session.question_started_at
+      ? now - new Date(session.question_started_at).getTime()
+      : Infinity;
+  const isRevealPhase =
+    session?.state === "question_active" && questionElapsedMs < REVEAL_MS;
+
   // Auto-advance to results when timer hits 0
   const autoAdvancing = useRef(false);
   useEffect(() => {
@@ -707,7 +716,7 @@ export default function EventHostPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -18 }}
                 transition={{ duration: 0.4 }}
-                className="flex w-full max-w-6xl flex-col items-center gap-8"
+                className="flex w-full max-w-7xl flex-col items-center gap-8"
               >
                 {/* Header strip */}
                 <div className="flex w-full items-center justify-between">
@@ -752,9 +761,15 @@ export default function EventHostPage() {
                   {currentQuestion.question_text}
                 </h2>
 
-                {/* Timer / vote count */}
-                {session.state === "question_active" && (
-                  <div className="flex items-center gap-8">
+                {/* Timer / vote count — hidden during the 2s reveal so the
+                    audience can focus on reading the options first */}
+                {session.state === "question_active" && !isRevealPhase && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.35 }}
+                    className="flex items-center gap-8"
+                  >
                     <CountdownRing
                       remaining={remainingSec}
                       total={QUESTION_SECONDS}
@@ -795,117 +810,191 @@ export default function EventHostPage() {
                         </span>
                       </motion.span>
                     </div>
-                  </div>
+                  </motion.div>
                 )}
 
-                {/* Bars */}
-                <div
-                  className="grid w-full max-w-5xl gap-4 sm:gap-5"
-                  style={{
-                    gridTemplateColumns: `repeat(${currentQuestion.answer_options.length}, minmax(0, 1fr))`,
-                  }}
-                >
-                  {currentQuestion.answer_options.map((opt, idx) => {
-                    const palette = optionPalette(idx);
-                    const count = voteCounts[opt.id] ?? 0;
-                    const isResults = session.state === "showing_results";
-                    const isCorrect = opt.is_correct;
-                    const dim = isResults && !isCorrect;
-                    // Bar height % of the tallest bar (so the tallest fills its box)
-                    const heightPct = isResults
-                      ? (count / maxVote) * 100
-                      : Math.min(100, (count / Math.max(1, participants.length)) * 100);
-
-                    return (
-                      <div
-                        key={opt.id}
-                        className="flex h-[280px] flex-col items-center justify-end sm:h-[360px]"
-                      >
-                        {isResults && isCorrect && (
+                {/* During the first 2 seconds — big card reveal of all four
+                    options so the audience can read them comfortably. */}
+                <AnimatePresence mode="wait">
+                  {isRevealPhase ? (
+                    <motion.div
+                      key="reveal-cards"
+                      initial={{ opacity: 0, scale: 0.96 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.96 }}
+                      transition={{ duration: 0.35 }}
+                      className="grid w-full max-w-7xl gap-4 sm:gap-5"
+                      style={{
+                        gridTemplateColumns: `repeat(${currentQuestion.answer_options.length}, minmax(0, 1fr))`,
+                      }}
+                    >
+                      {currentQuestion.answer_options.map((opt, idx) => {
+                        const palette = optionPalette(idx);
+                        return (
                           <motion.div
-                            initial={{ opacity: 0, y: -8, scale: 0.7 }}
+                            key={opt.id}
+                            initial={{ opacity: 0, y: 24, scale: 0.92 }}
                             animate={{ opacity: 1, y: 0, scale: 1 }}
-                            transition={{ duration: 0.4, delay: 0.2 }}
-                            className="mb-2 rounded-full px-3 py-0.5 text-xs font-extrabold uppercase"
-                            style={{
-                              background: "var(--gold)",
-                              color: "var(--navy-deep)",
-                              letterSpacing: "0.15em",
-                              fontFamily: "var(--font-heebo)",
-                            }}
-                          >
-                            ✓ תשובה נכונה
-                          </motion.div>
-                        )}
-                        <motion.span
-                          key={`cnt-${opt.id}-${count}`}
-                          initial={{ scale: 0.6, opacity: 0 }}
-                          animate={{ scale: 1, opacity: 1 }}
-                          transition={{ duration: 0.25 }}
-                          className="mb-2 font-mono text-3xl font-extrabold tabular-nums sm:text-4xl"
-                          style={{
-                            color: "var(--navy)",
-                            opacity: dim ? 0.4 : 1,
-                          }}
-                        >
-                          {count}
-                        </motion.span>
-
-                        <div className="flex w-full flex-1 items-end">
-                          <motion.div
-                            className="w-full rounded-t-2xl"
-                            initial={{ height: 0 }}
-                            animate={{ height: `${heightPct}%` }}
                             transition={{
-                              duration: 0.7,
+                              delay: idx * 0.1,
+                              duration: 0.45,
                               type: "spring",
-                              stiffness: 100,
-                              damping: 16,
+                              stiffness: 180,
+                              damping: 18,
                             }}
+                            className="flex h-[340px] flex-col justify-between rounded-3xl p-5 text-white sm:h-[440px] sm:p-7 md:h-[500px]"
                             style={{
-                              background: `linear-gradient(180deg, ${palette.hex} 0%, ${palette.deep} 100%)`,
-                              boxShadow: `0 -16px 36px -10px ${palette.hex}55`,
-                              opacity: dim ? 0.32 : 1,
-                              outline:
-                                isResults && isCorrect
-                                  ? `4px solid var(--gold)`
-                                  : "none",
-                              outlineOffset: isResults && isCorrect ? "3px" : 0,
+                              background: `linear-gradient(140deg, ${palette.hex} 0%, ${palette.deep} 100%)`,
+                              boxShadow: `0 24px 60px -16px ${palette.hex}80`,
                             }}
-                          />
-                        </div>
+                          >
+                            <div className="h-14 w-14 opacity-85 sm:h-16 sm:w-16 md:h-20 md:w-20">
+                              <OptionShape
+                                kind={palette.shape}
+                                className="h-full w-full"
+                              />
+                            </div>
+                            <div
+                              className="flex flex-1 items-center justify-center text-center font-extrabold leading-tight"
+                              style={{
+                                fontFamily: "var(--font-heebo)",
+                                fontSize: "clamp(1.25rem, 2.6vw, 2.1rem)",
+                              }}
+                            >
+                              {opt.text}
+                            </div>
+                            <div
+                              className="self-end text-3xl font-extrabold opacity-70 sm:text-4xl"
+                              style={{ fontFamily: "var(--font-heebo)" }}
+                            >
+                              {idx + 1}
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </motion.div>
+                  ) : (
+                    /* Bar chart — votes filling live + correctness reveal */
+                    <motion.div
+                      key="bars"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.35 }}
+                      className="grid w-full max-w-7xl gap-4 sm:gap-6"
+                      style={{
+                        gridTemplateColumns: `repeat(${currentQuestion.answer_options.length}, minmax(0, 1fr))`,
+                      }}
+                    >
+                      {currentQuestion.answer_options.map((opt, idx) => {
+                        const palette = optionPalette(idx);
+                        const count = voteCounts[opt.id] ?? 0;
+                        const isResults = session.state === "showing_results";
+                        const isCorrect = opt.is_correct;
+                        const dim = isResults && !isCorrect;
+                        const heightPct = isResults
+                          ? (count / maxVote) * 100
+                          : Math.min(
+                              100,
+                              (count / Math.max(1, participants.length)) * 100,
+                            );
 
-                        <div
-                          className="mt-3 flex flex-col items-center gap-2"
-                          style={{ opacity: dim ? 0.5 : 1 }}
-                        >
+                        return (
                           <div
-                            className="h-8 w-8 sm:h-10 sm:w-10"
-                            style={{ color: palette.hex }}
+                            key={opt.id}
+                            className="flex h-[340px] flex-col items-center justify-end sm:h-[440px] md:h-[500px]"
                           >
-                            <OptionShape
-                              kind={palette.shape}
-                              className="h-full w-full"
-                            />
+                            {isResults && isCorrect && (
+                              <motion.div
+                                initial={{ opacity: 0, y: -8, scale: 0.7 }}
+                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                transition={{ duration: 0.4, delay: 0.2 }}
+                                className="mb-2 rounded-full px-3 py-1 text-xs font-extrabold uppercase sm:text-sm"
+                                style={{
+                                  background: "var(--gold)",
+                                  color: "var(--navy-deep)",
+                                  letterSpacing: "0.15em",
+                                  fontFamily: "var(--font-heebo)",
+                                }}
+                              >
+                                ✓ תשובה נכונה
+                              </motion.div>
+                            )}
+                            <motion.span
+                              key={`cnt-${opt.id}-${count}`}
+                              initial={{ scale: 0.6, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              transition={{ duration: 0.25 }}
+                              className="mb-2 font-mono font-extrabold tabular-nums"
+                              style={{
+                                color: "var(--navy)",
+                                opacity: dim ? 0.4 : 1,
+                                fontSize: "clamp(2rem, 3.6vw, 3.4rem)",
+                                fontFamily: "var(--font-heebo)",
+                              }}
+                            >
+                              {count}
+                            </motion.span>
+
+                            <div className="flex w-full flex-1 items-end">
+                              <motion.div
+                                className="w-full rounded-t-2xl"
+                                initial={{ height: 0 }}
+                                animate={{ height: `${heightPct}%` }}
+                                transition={{
+                                  duration: 0.7,
+                                  type: "spring",
+                                  stiffness: 100,
+                                  damping: 16,
+                                }}
+                                style={{
+                                  background: `linear-gradient(180deg, ${palette.hex} 0%, ${palette.deep} 100%)`,
+                                  boxShadow: `0 -16px 36px -10px ${palette.hex}55`,
+                                  opacity: dim ? 0.32 : 1,
+                                  outline:
+                                    isResults && isCorrect
+                                      ? `4px solid var(--gold)`
+                                      : "none",
+                                  outlineOffset:
+                                    isResults && isCorrect ? "3px" : 0,
+                                }}
+                              />
+                            </div>
+
+                            <div
+                              className="mt-4 flex flex-col items-center gap-2.5"
+                              style={{ opacity: dim ? 0.5 : 1 }}
+                            >
+                              <div
+                                className="h-10 w-10 sm:h-12 sm:w-12 md:h-14 md:w-14"
+                                style={{ color: palette.hex }}
+                              >
+                                <OptionShape
+                                  kind={palette.shape}
+                                  className="h-full w-full"
+                                />
+                              </div>
+                              <div
+                                className="text-center font-extrabold leading-tight"
+                                style={{
+                                  color: "var(--navy)",
+                                  fontFamily: "var(--font-heebo)",
+                                  fontSize: "clamp(1.05rem, 1.9vw, 1.55rem)",
+                                }}
+                              >
+                                {opt.text}
+                              </div>
+                            </div>
                           </div>
-                          <div
-                            className="text-center text-sm font-bold leading-tight sm:text-base"
-                            style={{
-                              color: "var(--navy)",
-                              fontFamily: "var(--font-heebo)",
-                            }}
-                          >
-                            {opt.text}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                        );
+                      })}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 {/* Controls */}
                 <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
-                  {session.state === "question_active" && (
+                  {session.state === "question_active" && !isRevealPhase && (
                     <button
                       onClick={endQuestionNow}
                       disabled={advancing}
