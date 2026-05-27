@@ -495,27 +495,26 @@ export default function EventHostPage() {
     <>
       <EventBackground />
       <main className="relative z-10 flex min-h-screen flex-col">
-        {/* TOPBAR */}
-        <header className="flex items-center justify-between px-5 py-4 sm:px-10 sm:py-5">
-          <div className="flex items-center gap-4 sm:gap-5">
+        {/* TOPBAR — public-facing, so no role label */}
+        <header className="flex items-center justify-between px-6 py-5 sm:px-12 sm:py-7">
+          <div className="flex items-center gap-5 sm:gap-7">
             <Image
               src="/csl-logo.png"
               alt="CSL"
-              width={120}
-              height={26}
+              width={180}
+              height={42}
               priority
-              className="h-6 w-auto rounded-md bg-white px-2 py-1 sm:h-7"
+              className="h-10 w-auto rounded-lg bg-white px-3 py-1.5 sm:h-12"
             />
             <Image
               src="/andembry-logo.png"
               alt="Andembry"
-              width={120}
-              height={22}
+              width={200}
+              height={40}
               priority
-              className="h-5 w-auto opacity-95 brightness-0 invert sm:h-6"
+              className="h-9 w-auto opacity-95 brightness-0 invert sm:h-11"
             />
           </div>
-          <span className="viewtag">Host · מסך מנחה</span>
         </header>
 
         {/* STAGE */}
@@ -534,48 +533,94 @@ export default function EventHostPage() {
                 <div className="grid items-center gap-8 md:grid-cols-[1.1fr_.9fr] md:gap-10">
                   {/* LEFT — title + steps + pin */}
                   <div className="text-right">
-                    <div className="eyebrow-mini">חידון HAE אינטראקטיבי</div>
+                    <div
+                      className="eyebrow-mini"
+                      style={{ fontSize: "0.85rem", letterSpacing: "0.3em" }}
+                    >
+                      חידון HAE אינטראקטיבי
+                    </div>
                     <h1
-                      className="hero-title mt-2"
+                      className="hero-title mt-3"
                       dir="ltr"
                       style={{
                         textAlign: "right",
-                        fontSize: "clamp(2.4rem, 6vw, 4.4rem)",
+                        fontSize: "clamp(3rem, 7.5vw, 5.8rem)",
                       }}
                     >
                       Beyond <span className="g">the</span> Attack
                     </h1>
                     <p
-                      className="mt-3 max-w-md"
+                      className="mt-4 max-w-md"
                       style={{
-                        color: "rgba(255,255,255,0.8)",
-                        fontSize: "clamp(1rem, 2vw, 1.2rem)",
+                        color: "rgba(255,255,255,0.85)",
+                        fontSize: "clamp(1.1rem, 2.2vw, 1.4rem)",
                       }}
                     >
                       סרקו את הקוד עם הנייד, הצטרפו לחידון ובדקו את הידע שלכם
                       על HAE ועל <span dir="ltr">Andembry</span>.
                     </p>
 
-                    <div className="mt-7 flex flex-col gap-3">
-                      <div className="flex items-center gap-3 font-semibold text-white/85">
-                        <span className="step-num">1</span>
+                    <div className="mt-8 flex flex-col gap-4">
+                      <div
+                        className="flex items-center gap-4 font-semibold text-white/90"
+                        style={{ fontSize: "clamp(1rem, 1.8vw, 1.2rem)" }}
+                      >
+                        <span
+                          className="step-num"
+                          style={{
+                            width: 38,
+                            height: 38,
+                            fontSize: "1.05rem",
+                          }}
+                        >
+                          1
+                        </span>
                         פותחים את מצלמת הנייד
                       </div>
-                      <div className="flex items-center gap-3 font-semibold text-white/85">
-                        <span className="step-num s2">2</span>
+                      <div
+                        className="flex items-center gap-4 font-semibold text-white/90"
+                        style={{ fontSize: "clamp(1rem, 1.8vw, 1.2rem)" }}
+                      >
+                        <span
+                          className="step-num s2"
+                          style={{
+                            width: 38,
+                            height: 38,
+                            fontSize: "1.05rem",
+                          }}
+                        >
+                          2
+                        </span>
                         סורקים את קוד ה-QR
                       </div>
-                      <div className="flex items-center gap-3 font-semibold text-white/85">
-                        <span className="step-num s3">3</span>
+                      <div
+                        className="flex items-center gap-4 font-semibold text-white/90"
+                        style={{ fontSize: "clamp(1rem, 1.8vw, 1.2rem)" }}
+                      >
+                        <span
+                          className="step-num s3"
+                          style={{
+                            width: 38,
+                            height: 38,
+                            fontSize: "1.05rem",
+                          }}
+                        >
+                          3
+                        </span>
                         מזינים שם ומצטרפים
                       </div>
                     </div>
 
-                    <div className="pin-box mt-7">
-                      <span className="lbl">או הצטרפות עם קוד</span>
+                    <div className="pin-box mt-8" style={{ padding: "26px 32px" }}>
+                      <span
+                        className="lbl"
+                        style={{ fontSize: "0.85rem", letterSpacing: "0.22em" }}
+                      >
+                        או הצטרפות עם קוד
+                      </span>
                       <span
                         className="pin"
-                        style={{ fontSize: "clamp(2.4rem, 6vw, 3.6rem)" }}
+                        style={{ fontSize: "clamp(3rem, 7vw, 4.6rem)" }}
                       >
                         {formattedCode}
                       </span>
@@ -589,16 +634,28 @@ export default function EventHostPage() {
                     transition={{ duration: 0.5, delay: 0.15 }}
                     className="mx-auto"
                   >
-                    <div className="qr-card">
-                      <div className="qtitle">סרקו להצטרפות</div>
-                      <div className="qsub" dir="ltr">
+                    <div className="qr-card" style={{ padding: 36 }}>
+                      <div
+                        className="qtitle"
+                        style={{ fontSize: "1.5rem", marginBottom: 6 }}
+                      >
+                        סרקו להצטרפות
+                      </div>
+                      <div
+                        className="qsub"
+                        dir="ltr"
+                        style={{ fontSize: "1.05rem", marginBottom: 20 }}
+                      >
                         {origin && origin.replace(/^https?:\/\//, "")}/join
                       </div>
-                      <div className="qr-wrap">
+                      <div
+                        className="qr-wrap"
+                        style={{ width: "min(340px, 70vw)" }}
+                      >
                         {joinUrl ? (
                           <QRCodeSVG
                             value={joinUrl}
-                            size={220}
+                            size={320}
                             level="M"
                             marginSize={0}
                             bgColor="#ffffff"
@@ -613,16 +670,21 @@ export default function EventHostPage() {
                 </div>
 
                 {/* PARTICIPANTS + START */}
-                <div className="mt-10 text-center">
-                  <div className="eyebrow-mini">חדר המתנה</div>
+                <div className="mt-12 text-center">
+                  <div
+                    className="eyebrow-mini"
+                    style={{ fontSize: "0.85rem", letterSpacing: "0.3em" }}
+                  >
+                    חדר המתנה
+                  </div>
                   <p
-                    className="mt-2 font-extrabold"
+                    className="mt-3 font-extrabold"
                     style={{
                       color: "var(--gold)",
-                      fontSize: "clamp(1.05rem, 2.4vw, 1.4rem)",
+                      fontSize: "clamp(1.25rem, 2.8vw, 1.7rem)",
                     }}
                   >
-                    <span style={{ fontSize: "1.5em" }}>
+                    <span style={{ fontSize: "1.6em" }}>
                       {participants.length}
                     </span>{" "}
                     משתתפים מחוברים
@@ -687,12 +749,15 @@ export default function EventHostPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -18 }}
                 transition={{ duration: 0.4 }}
-                className="w-full max-w-5xl"
+                className="w-full max-w-6xl"
               >
-                <div className="mb-5 flex items-center justify-between text-white">
+                <div className="mb-6 flex items-center justify-between text-white">
                   <span
-                    className="font-bold opacity-80"
-                    style={{ fontFamily: "var(--font-heebo)" }}
+                    className="font-bold opacity-85"
+                    style={{
+                      fontFamily: "var(--font-heebo)",
+                      fontSize: "clamp(1rem, 1.8vw, 1.25rem)",
+                    }}
                   >
                     שאלה {currentIndex + 1} מתוך {questions.length}
                   </span>
@@ -704,7 +769,7 @@ export default function EventHostPage() {
 
                 <div className="q-text">{currentQuestion.question_text}</div>
 
-                <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
                   {currentQuestion.answer_options.map((opt, idx) => {
                     const count = voteCounts[opt.id] ?? 0;
                     return (
@@ -750,23 +815,25 @@ export default function EventHostPage() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.4 }}
-                    className="mt-6 flex items-center justify-between text-white/75"
+                    className="mt-7 flex items-center justify-between text-white/75"
                     style={{ fontFamily: "var(--font-heebo)" }}
                   >
-                    <span className="text-sm font-bold">
+                    <span
+                      className="font-bold"
+                      style={{ fontSize: "clamp(1rem, 1.7vw, 1.2rem)" }}
+                    >
                       ענו עד כה:{" "}
-                      <span className="text-white">
-                        {totalVotes}
-                      </span>{" "}
-                      / {participants.length}
+                      <span className="text-white">{totalVotes}</span> /{" "}
+                      {participants.length}
                     </span>
                     <button
                       onClick={endQuestionNow}
                       disabled={advancing}
-                      className="rounded-full border px-5 py-2 text-sm font-bold transition-all hover:-translate-y-0.5 disabled:opacity-50"
+                      className="rounded-full border px-6 py-2.5 font-bold transition-all hover:-translate-y-0.5 disabled:opacity-50"
                       style={{
                         borderColor: "rgba(255,255,255,0.25)",
                         color: "#fff",
+                        fontSize: "1rem",
                       }}
                     >
                       סיים שאלה עכשיו
@@ -784,12 +851,15 @@ export default function EventHostPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -18 }}
                 transition={{ duration: 0.45 }}
-                className="w-full max-w-5xl"
+                className="w-full max-w-6xl"
               >
-                <div className="mb-5 flex items-center justify-between text-white">
+                <div className="mb-6 flex items-center justify-between text-white">
                   <span
-                    className="font-bold opacity-80"
-                    style={{ fontFamily: "var(--font-heebo)" }}
+                    className="font-bold opacity-85"
+                    style={{
+                      fontFamily: "var(--font-heebo)",
+                      fontSize: "clamp(1rem, 1.8vw, 1.25rem)",
+                    }}
                   >
                     תוצאות שאלה {currentIndex + 1}
                   </span>
@@ -797,16 +867,16 @@ export default function EventHostPage() {
 
                 <div
                   className="q-text"
-                  style={{ fontSize: "clamp(1.1rem, 2.6vw, 1.6rem)" }}
+                  style={{ fontSize: "clamp(1.35rem, 3vw, 2rem)" }}
                 >
                   {currentQuestion.question_text}
                 </div>
 
                 <div
-                  className="mt-6 grid items-end gap-3 sm:gap-4"
+                  className="mt-7 grid items-end gap-3 sm:gap-5"
                   style={{
                     gridTemplateColumns: `repeat(${currentQuestion.answer_options.length}, 1fr)`,
-                    height: 280,
+                    height: 340,
                   }}
                 >
                   {currentQuestion.answer_options.map((opt, idx) => {
@@ -840,7 +910,8 @@ export default function EventHostPage() {
                   })}
                 </div>
 
-                <div className="mt-3 grid gap-3 sm:gap-4"
+                <div
+                  className="mt-4 grid gap-3 sm:gap-5"
                   style={{
                     gridTemplateColumns: `repeat(${currentQuestion.answer_options.length}, 1fr)`,
                   }}
@@ -848,12 +919,13 @@ export default function EventHostPage() {
                   {currentQuestion.answer_options.map((opt) => (
                     <div
                       key={opt.id}
-                      className="text-center text-xs font-bold leading-tight sm:text-sm"
+                      className="text-center font-bold leading-tight"
                       style={{
                         color: opt.is_correct
                           ? "var(--gold)"
-                          : "rgba(255,255,255,0.6)",
+                          : "rgba(255,255,255,0.65)",
                         fontFamily: "var(--font-heebo)",
+                        fontSize: "clamp(0.95rem, 1.5vw, 1.2rem)",
                       }}
                     >
                       {opt.text}
@@ -1070,31 +1142,31 @@ function CountdownRing({
   total: number;
 }) {
   const pct = Math.max(0, Math.min(1, remaining / total));
-  const radius = 36;
+  const radius = 46;
   const circ = 2 * Math.PI * radius;
   const urgent = remaining <= 5;
   return (
     <div className={`timer-ring ${urgent ? "urgent" : ""}`}>
       <svg
-        viewBox="0 0 80 80"
-        className="absolute inset-0"
+        viewBox="0 0 108 108"
+        className="absolute inset-0 h-full w-full"
         style={{ transform: "rotate(-90deg)" }}
       >
         <circle
-          cx="40"
-          cy="40"
+          cx="54"
+          cy="54"
           r={radius}
           fill="none"
           stroke="rgba(23,61,110,0.12)"
-          strokeWidth="6"
+          strokeWidth="8"
         />
         <motion.circle
-          cx="40"
-          cy="40"
+          cx="54"
+          cy="54"
           r={radius}
           fill="none"
           stroke={urgent ? "var(--red)" : "var(--teal)"}
-          strokeWidth="6"
+          strokeWidth="8"
           strokeLinecap="round"
           strokeDasharray={circ}
           animate={{ strokeDashoffset: circ * (1 - pct) }}
