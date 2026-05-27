@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { createClient } from "@/lib/supabase/client";
 import { generateJoinCode } from "@/lib/joinCode";
 import { useNow, remainingSeconds } from "@/lib/timer";
-import { ANDEMBRY_QUIZ_ID, QUESTION_SECONDS, optionPalette } from "@/lib/eventConfig";
+import { ANDEMBRY_QUIZ_ID, QUESTION_SECONDS } from "@/lib/eventConfig";
 import type {
   AnswerOption,
   GameSession,
@@ -19,44 +19,37 @@ import type {
 type FullQuestion = Question & { answer_options: AnswerOption[] };
 
 const SESSION_STORAGE_KEY = "andembry-event-session";
+const REVEAL_MS = 5000;
 
-function OptionShape({
-  kind,
-  className,
-}: {
-  kind: "triangle" | "diamond" | "circle" | "square";
-  className?: string;
-}) {
-  const props = {
-    viewBox: "0 0 100 100",
-    fill: "currentColor",
-    "aria-hidden": true,
-    className,
-  } as const;
-  if (kind === "triangle")
+// SVGs that match the demo — paths for triangle / diamond / circle / square
+function OptionShape({ index }: { index: number }) {
+  if (index === 0)
     return (
-      <svg {...props}>
-        <polygon points="50,15 92,85 8,85" />
+      <svg viewBox="0 0 32 32">
+        <path d="M16 3l13 26H3z" />
       </svg>
     );
-  if (kind === "diamond")
+  if (index === 1)
     return (
-      <svg {...props}>
-        <polygon points="50,8 92,50 50,92 8,50" />
+      <svg viewBox="0 0 32 32">
+        <path d="M16 2l14 14-14 14L2 16z" />
       </svg>
     );
-  if (kind === "circle")
+  if (index === 2)
     return (
-      <svg {...props}>
-        <circle cx="50" cy="50" r="38" />
+      <svg viewBox="0 0 32 32">
+        <circle cx="16" cy="16" r="14" />
       </svg>
     );
   return (
-    <svg {...props}>
-      <rect x="15" y="15" width="70" height="70" rx="10" />
+    <svg viewBox="0 0 32 32">
+      <rect x="3" y="3" width="26" height="26" rx="3" />
     </svg>
   );
 }
+
+const ANS_CLASS = ["a0", "a1", "a2", "a3"] as const;
+const BAR_CLASS = ["b0", "b1", "b2", "b3"] as const;
 
 export default function EventHostPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -98,7 +91,6 @@ export default function EventHostPage() {
           }
         }
 
-        // Create a fresh session — retry on rare join_code collision
         for (let i = 0; i < 5; i++) {
           const code = generateJoinCode();
           const { data, error } = await supabase
@@ -157,7 +149,7 @@ export default function EventHostPage() {
     };
   }, [session, supabase]);
 
-  // ---- Load existing participants + subscribe to live updates ----
+  // ---- Load participants ----
   useEffect(() => {
     if (!session) return;
     let cancelled = false;
@@ -174,6 +166,7 @@ export default function EventHostPage() {
     };
   }, [session, supabase]);
 
+  // ---- Realtime subscriptions ----
   useEffect(() => {
     if (!session) return;
     const channel = supabase
@@ -309,8 +302,7 @@ export default function EventHostPage() {
     ? remainingSeconds(session!.question_started_at!, QUESTION_SECONDS, now)
     : 0;
 
-  /** First 5 seconds of a question show the answer cards big — no bars yet. */
-  const REVEAL_MS = 5000;
+  /** First REVEAL_MS shows the cards without live counters. */
   const questionElapsedMs =
     session?.state === "question_active" && session.question_started_at
       ? now - new Date(session.question_started_at).getTime()
@@ -318,7 +310,6 @@ export default function EventHostPage() {
   const isRevealPhase =
     session?.state === "question_active" && questionElapsedMs < REVEAL_MS;
 
-  // Auto-advance to results when timer hits 0
   const autoAdvancing = useRef(false);
   useEffect(() => {
     if (!session) return;
@@ -366,10 +357,7 @@ export default function EventHostPage() {
   const goNext = useCallback(async () => {
     if (!session || !currentQuestion || advancing) return;
     setAdvancing(true);
-    const idx = questions.findIndex((q) => q.id === currentQuestion.id);
-    const next = questions[idx + 1];
 
-    // Score this question first: +100 to each participant who picked the correct option
     const correct = currentQuestion.answer_options.find((o) => o.is_correct);
     if (correct) {
       const correctIds = responses
@@ -390,6 +378,8 @@ export default function EventHostPage() {
       );
     }
 
+    const idx = questions.findIndex((q) => q.id === currentQuestion.id);
+    const next = questions[idx + 1];
     if (next) {
       await supabase
         .from("game_sessions")
@@ -422,23 +412,15 @@ export default function EventHostPage() {
     setSession(null);
     setResponses([]);
     setParticipants([]);
-    // The boot effect runs again because session is now null.
-    // We force a remount of the page by reloading.
     if (typeof window !== "undefined") window.location.reload();
   }, []);
 
   // ---- Keyboard / presentation-remote advance ----
-  // Space, Enter, ArrowRight, PageDown — all keys a typical presentation
-  // clicker emits — trigger the primary action of the current screen so the
-  // host can drive the event without showing a mouse. Question-active state
-  // is intentionally NOT bound, so an accidental press during answering
-  // doesn't truncate the timer.
   useEffect(() => {
     if (!session) return;
     const handler = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement | null)?.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA") return;
-
       const advanceKeys = new Set([
         " ",
         "Spacebar",
@@ -460,52 +442,43 @@ export default function EventHostPage() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [
-    session,
-    participants.length,
-    startFirst,
-    goNext,
-    startFresh,
-  ]);
+  }, [session, participants.length, startFirst, goNext, startFresh]);
 
   // ---------- RENDER ----------
 
   if (bootError) {
     return (
-      <main className="flex flex-1 flex-col items-center justify-center gap-3 p-8 text-center">
-        <p
-          className="text-lg font-bold"
-          style={{ color: "var(--red)" }}
-        >
-          {bootError}
-        </p>
-        <button
-          onClick={() => window.location.reload()}
-          className="cta-red rounded-full px-7 py-3 font-bold"
-          style={{ fontFamily: "var(--font-heebo)" }}
-        >
-          נסה שוב
-        </button>
-      </main>
+      <>
+        <EventBackground />
+        <main className="flex min-h-screen flex-col items-center justify-center gap-3 p-8 text-center">
+          <p className="text-lg font-bold" style={{ color: "var(--gold)" }}>
+            {bootError}
+          </p>
+          <button
+            onClick={() => window.location.reload()}
+            className="cta-red rounded-full px-7 py-3 font-bold"
+          >
+            נסה שוב
+          </button>
+        </main>
+      </>
     );
   }
 
   if (!session) {
     return (
-      <main
-        className="flex flex-1 items-center justify-center p-8"
-        style={{ color: "var(--foreground-faint)" }}
-      >
-        טוען את האירוע…
-      </main>
+      <>
+        <EventBackground />
+        <main className="flex min-h-screen items-center justify-center p-8 text-white/55">
+          טוען את האירוע…
+        </main>
+      </>
     );
   }
 
-  const joinUrl = origin
-    ? `${origin}/join?code=${session.join_code}`
-    : "";
+  const joinUrl = origin ? `${origin}/join?code=${session.join_code}` : "";
+  const formattedCode = session.join_code.replace(/(\d{3})(\d{3})/, "$1 $2");
 
-  // Tally votes for current question
   const voteCounts: Record<string, number> = {};
   if (currentQuestion) {
     for (const opt of currentQuestion.answer_options) voteCounts[opt.id] = 0;
@@ -519,733 +492,567 @@ export default function EventHostPage() {
   const maxVote = Math.max(1, ...Object.values(voteCounts));
 
   return (
-    <main className="relative flex min-h-screen flex-1 flex-col">
-      {/* Top nav with logos */}
-      <header className="flex items-center justify-between px-5 py-4 sm:px-10 sm:py-5">
-        <div className="flex items-center gap-4 sm:gap-6">
-          <Image
-            src="/csl-logo.png"
-            alt="CSL"
-            width={120}
-            height={30}
-            priority
-            className="h-7 w-auto sm:h-9"
-          />
-          <span className="hidden h-7 w-px bg-gradient-to-b from-[var(--grey)] to-transparent sm:inline-block" />
-          <Image
-            src="/andembry-logo.png"
-            alt="Andembry"
-            width={120}
-            height={24}
-            priority
-            className="hidden h-5 w-auto opacity-95 sm:block sm:h-7"
-          />
-        </div>
-        <div
-          className="text-xs font-bold uppercase sm:text-sm"
-          style={{
-            letterSpacing: "0.3em",
-            color: "var(--teal-deep)",
-            fontFamily: "var(--font-heebo)",
-          }}
-        >
-          Beyond the Attack
-        </div>
-      </header>
+    <>
+      <EventBackground />
+      <main className="relative z-10 flex min-h-screen flex-col">
+        {/* TOPBAR */}
+        <header className="flex items-center justify-between px-5 py-4 sm:px-10 sm:py-5">
+          <div className="flex items-center gap-4 sm:gap-5">
+            <Image
+              src="/csl-logo.png"
+              alt="CSL"
+              width={120}
+              height={26}
+              priority
+              className="h-6 w-auto rounded-md bg-white px-2 py-1 sm:h-7"
+            />
+            <Image
+              src="/andembry-logo.png"
+              alt="Andembry"
+              width={120}
+              height={22}
+              priority
+              className="h-5 w-auto opacity-95 brightness-0 invert sm:h-6"
+            />
+          </div>
+          <span className="viewtag">Host · מסך מנחה</span>
+        </header>
 
-      <div className="flex flex-1 flex-col items-center justify-center px-5 pb-12 sm:px-10">
-        <AnimatePresence mode="wait">
-          {/* ---------- WAITING — show QR + code ---------- */}
-          {session.state === "waiting" && (
-            <motion.section
-              key="waiting"
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -18 }}
-              transition={{ duration: 0.45 }}
-              className="flex w-full max-w-6xl flex-col items-center gap-10"
-            >
-              <div className="text-center">
-                <span className="eyebrow">הצטרפו לחידון</span>
-                <h1
-                  className="hero-title mt-4"
-                  dir="ltr"
-                  style={{ fontSize: "clamp(2.4rem, 6vw, 4.2rem)" }}
-                >
-                  Beyond <span className="amp">the</span> Attack
-                </h1>
-                <p
-                  className="mx-auto mt-3 max-w-xl text-base sm:text-lg"
-                  style={{ color: "var(--foreground-muted)" }}
-                >
-                  סרקו את ה-QR או הקלידו את הקוד בטלפון שלכם.
-                </p>
-              </div>
-
-              <div className="flex w-full flex-col items-center gap-8 md:flex-row md:justify-center md:gap-14">
-                {/* Big code */}
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.94 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.5, ease: "easeOut" }}
-                  className="flex flex-col items-center"
-                >
-                  <div
-                    className="text-xs font-bold uppercase"
-                    style={{
-                      letterSpacing: "0.3em",
-                      color: "var(--foreground-muted)",
-                      fontFamily: "var(--font-heebo)",
-                    }}
-                  >
-                    קוד הצטרפות
-                  </div>
-                  <p
-                    className="gradient-text mt-3 font-mono font-extrabold tabular-nums"
-                    style={{
-                      fontSize: "clamp(4.5rem, 14vw, 9.5rem)",
-                      lineHeight: 1,
-                      letterSpacing: "0.12em",
-                    }}
-                  >
-                    {session.join_code}
-                  </p>
-                  <div
-                    className="mt-4 text-sm"
-                    style={{
-                      color: "var(--foreground-muted)",
-                      fontFamily: "var(--font-heebo)",
-                    }}
-                  >
-                    {origin && (
-                      <>
-                        או נכנסים ל-
-                        <span
-                          dir="ltr"
-                          className="font-mono font-bold"
-                          style={{ color: "var(--navy)" }}
-                        >
-                          {origin.replace(/^https?:\/\//, "")}/join
-                        </span>
-                      </>
-                    )}
-                  </div>
-                </motion.div>
-
-                {/* QR */}
-                {joinUrl && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.86 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.45, delay: 0.12 }}
-                    className="rounded-3xl bg-white p-5 shadow-[0_30px_70px_-30px_rgba(15,44,82,0.6)]"
-                  >
-                    <QRCodeSVG
-                      value={joinUrl}
-                      size={220}
-                      level="M"
-                      marginSize={0}
-                      bgColor="#ffffff"
-                      fgColor="#173d6e"
-                    />
-                  </motion.div>
-                )}
-              </div>
-
-              {/* Participants */}
-              <div className="w-full max-w-3xl">
-                <div className="mb-3 flex items-center justify-between">
-                  <span
-                    className="text-xs font-bold uppercase"
-                    style={{
-                      letterSpacing: "0.3em",
-                      color: "var(--foreground-muted)",
-                      fontFamily: "var(--font-heebo)",
-                    }}
-                  >
-                    מצטרפים
-                  </span>
-                  <motion.span
-                    key={`count-${participants.length}`}
-                    initial={{ scale: 0.7, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    className="text-2xl font-extrabold tabular-nums"
-                    style={{
-                      color: "var(--teal-deep)",
-                      fontFamily: "var(--font-heebo)",
-                    }}
-                  >
-                    {participants.length}
-                  </motion.span>
-                </div>
-                <div className="glass rounded-3xl p-5 min-h-24">
-                  {participants.length === 0 ? (
-                    <p
-                      className="py-6 text-center"
-                      style={{ color: "var(--foreground-faint)" }}
-                    >
-                      ממתינים למצטרפים…
-                    </p>
-                  ) : (
-                    <ul className="flex flex-wrap gap-2">
-                      <AnimatePresence initial={false}>
-                        {participants.map((p) => (
-                          <motion.li
-                            key={p.id}
-                            layout
-                            initial={{ opacity: 0, scale: 0.5, y: 10 }}
-                            animate={{ opacity: 1, scale: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.5 }}
-                            transition={{
-                              type: "spring",
-                              stiffness: 320,
-                              damping: 22,
-                            }}
-                            className="flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-bold"
-                            style={{
-                              background: "rgba(4,180,157,0.12)",
-                              color: "var(--teal-deep)",
-                              fontFamily: "var(--font-heebo)",
-                            }}
-                          >
-                            <span
-                              className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-extrabold text-white"
-                              style={{
-                                background:
-                                  "linear-gradient(135deg,var(--teal),var(--navy))",
-                              }}
-                            >
-                              {p.nickname.slice(0, 1)}
-                            </span>
-                            {p.nickname}
-                          </motion.li>
-                        ))}
-                      </AnimatePresence>
-                    </ul>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex flex-col items-center gap-2">
-                <button
-                  onClick={startFirst}
-                  disabled={
-                    advancing ||
-                    questions.length === 0 ||
-                    participants.length === 0
-                  }
-                  className="cta-red rounded-full px-12 py-5 text-xl font-extrabold disabled:cursor-not-allowed disabled:opacity-40"
-                  style={{ fontFamily: "var(--font-heebo)" }}
-                >
-                  {advancing ? "מתחיל…" : "התחלת החידון"}
-                </button>
-                {participants.length > 0 && <KbdHint />}
-                {participants.length === 0 && (
-                  <p
-                    className="text-xs"
-                    style={{ color: "var(--foreground-faint)" }}
-                  >
-                    הכפתור יופעל אחרי שמשתתף ראשון מצטרף
-                  </p>
-                )}
-              </div>
-            </motion.section>
-          )}
-
-          {/* ---------- QUESTION ACTIVE / SHOWING RESULTS ---------- */}
-          {(session.state === "question_active" ||
-            session.state === "showing_results") &&
-            currentQuestion && (
+        {/* STAGE */}
+        <div className="flex flex-1 flex-col items-center justify-center px-4 pb-12 sm:px-10">
+          <AnimatePresence mode="wait">
+            {/* ---------- WAITING ---------- */}
+            {session.state === "waiting" && (
               <motion.section
-                key={`q-${currentQuestion.id}-${session.state}`}
+                key="waiting"
                 initial={{ opacity: 0, y: 18 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -18 }}
-                transition={{ duration: 0.4 }}
-                className="flex w-full max-w-7xl flex-col items-center gap-8"
+                transition={{ duration: 0.45 }}
+                className="w-full max-w-6xl"
               >
-                {/* Header strip */}
-                <div className="flex w-full items-center justify-between">
-                  <span
-                    className="text-xs font-bold uppercase"
-                    style={{
-                      letterSpacing: "0.3em",
-                      color: "var(--foreground-muted)",
-                      fontFamily: "var(--font-heebo)",
-                    }}
-                  >
-                    שאלה {currentIndex + 1} / {questions.length}
-                  </span>
-                  <span
-                    className="rounded-full px-3 py-1 text-xs font-bold uppercase"
-                    style={{
-                      background:
-                        session.state === "question_active"
-                          ? "rgba(4,180,157,0.15)"
-                          : "rgba(254,200,78,0.2)",
-                      color:
-                        session.state === "question_active"
-                          ? "var(--teal-deep)"
-                          : "var(--gold-deep)",
-                      letterSpacing: "0.2em",
-                      fontFamily: "var(--font-heebo)",
-                    }}
-                  >
-                    {session.state === "question_active" ? "פעיל" : "תוצאות"}
-                  </span>
-                </div>
+                <div className="grid items-center gap-8 md:grid-cols-[1.1fr_.9fr] md:gap-10">
+                  {/* LEFT — title + steps + pin */}
+                  <div className="text-right">
+                    <div className="eyebrow-mini">חידון HAE אינטראקטיבי</div>
+                    <h1
+                      className="hero-title mt-2"
+                      dir="ltr"
+                      style={{
+                        textAlign: "right",
+                        fontSize: "clamp(2.4rem, 6vw, 4.4rem)",
+                      }}
+                    >
+                      Beyond <span className="g">the</span> Attack
+                    </h1>
+                    <p
+                      className="mt-3 max-w-md"
+                      style={{
+                        color: "rgba(255,255,255,0.8)",
+                        fontSize: "clamp(1rem, 2vw, 1.2rem)",
+                      }}
+                    >
+                      סרקו את הקוד עם הנייד, הצטרפו לחידון ובדקו את הידע שלכם
+                      על HAE ועל <span dir="ltr">Andembry</span>.
+                    </p>
 
-                {/* Question text */}
-                <h2
-                  className="text-center font-bold leading-tight"
-                  style={{
-                    color: "var(--navy)",
-                    fontFamily: "var(--font-heebo)",
-                    fontSize: "clamp(1.8rem, 4.5vw, 3.2rem)",
-                  }}
-                >
-                  {currentQuestion.question_text}
-                </h2>
+                    <div className="mt-7 flex flex-col gap-3">
+                      <div className="flex items-center gap-3 font-semibold text-white/85">
+                        <span className="step-num">1</span>
+                        פותחים את מצלמת הנייד
+                      </div>
+                      <div className="flex items-center gap-3 font-semibold text-white/85">
+                        <span className="step-num s2">2</span>
+                        סורקים את קוד ה-QR
+                      </div>
+                      <div className="flex items-center gap-3 font-semibold text-white/85">
+                        <span className="step-num s3">3</span>
+                        מזינים שם ומצטרפים
+                      </div>
+                    </div>
 
-                {/* Timer / vote count — hidden during the 2s reveal so the
-                    audience can focus on reading the options first */}
-                {session.state === "question_active" && !isRevealPhase && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.35 }}
-                    className="flex items-center gap-8"
-                  >
-                    <CountdownRing
-                      remaining={remainingSec}
-                      total={QUESTION_SECONDS}
-                    />
-                    <div className="flex flex-col items-start">
+                    <div className="pin-box mt-7">
+                      <span className="lbl">או הצטרפות עם קוד</span>
                       <span
-                        className="text-xs font-bold uppercase"
-                        style={{
-                          letterSpacing: "0.25em",
-                          color: "var(--foreground-muted)",
-                          fontFamily: "var(--font-heebo)",
-                        }}
+                        className="pin"
+                        style={{ fontSize: "clamp(2.4rem, 6vw, 3.6rem)" }}
                       >
-                        ענו
+                        {formattedCode}
                       </span>
-                      <motion.span
-                        key={`tv-${totalVotes}`}
-                        initial={{ scale: 0.7, opacity: 0 }}
-                        animate={{ scale: 1, opacity: 1 }}
-                        transition={{
-                          type: "spring",
-                          stiffness: 320,
-                          damping: 18,
-                        }}
-                        className="font-mono text-5xl font-extrabold tabular-nums"
-                        style={{
-                          color: "var(--navy)",
-                          fontFamily: "var(--font-heebo)",
-                        }}
-                      >
-                        {totalVotes}
-                        <span
-                          className="text-2xl"
-                          style={{ color: "var(--foreground-muted)" }}
-                        >
-                          {" "}
-                          / {participants.length}
-                        </span>
-                      </motion.span>
+                    </div>
+                  </div>
+
+                  {/* RIGHT — QR card with gradient rim */}
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.5, delay: 0.15 }}
+                    className="mx-auto"
+                  >
+                    <div className="qr-card">
+                      <div className="qtitle">סרקו להצטרפות</div>
+                      <div className="qsub" dir="ltr">
+                        {origin && origin.replace(/^https?:\/\//, "")}/join
+                      </div>
+                      <div className="qr-wrap">
+                        {joinUrl ? (
+                          <QRCodeSVG
+                            value={joinUrl}
+                            size={220}
+                            level="M"
+                            marginSize={0}
+                            bgColor="#ffffff"
+                            fgColor="#173d6e"
+                          />
+                        ) : (
+                          <div style={{ height: 220 }} />
+                        )}
+                      </div>
                     </div>
                   </motion.div>
-                )}
+                </div>
 
-                {/* During the first 2 seconds — big card reveal of all four
-                    options so the audience can read them comfortably. */}
-                <AnimatePresence mode="wait">
-                  {isRevealPhase ? (
-                    <motion.div
-                      key="reveal-cards"
-                      initial={{ opacity: 0, scale: 0.96 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.96 }}
-                      transition={{ duration: 0.35 }}
-                      className="grid w-full max-w-7xl gap-4 sm:gap-5"
-                      style={{
-                        gridTemplateColumns: `repeat(${currentQuestion.answer_options.length}, minmax(0, 1fr))`,
-                      }}
-                    >
-                      {currentQuestion.answer_options.map((opt, idx) => {
-                        const palette = optionPalette(idx);
-                        return (
-                          <motion.div
-                            key={opt.id}
-                            initial={{ opacity: 0, y: 24, scale: 0.92 }}
-                            animate={{ opacity: 1, y: 0, scale: 1 }}
-                            transition={{
-                              delay: idx * 0.1,
-                              duration: 0.45,
-                              type: "spring",
-                              stiffness: 180,
-                              damping: 18,
-                            }}
-                            className="flex h-[340px] flex-col justify-between rounded-3xl p-5 text-white sm:h-[440px] sm:p-7 md:h-[500px]"
-                            style={{
-                              background: `linear-gradient(140deg, ${palette.hex} 0%, ${palette.deep} 100%)`,
-                              boxShadow: `0 24px 60px -16px ${palette.hex}80`,
-                            }}
-                          >
-                            <div className="h-14 w-14 opacity-85 sm:h-16 sm:w-16 md:h-20 md:w-20">
-                              <OptionShape
-                                kind={palette.shape}
-                                className="h-full w-full"
-                              />
-                            </div>
-                            <div
-                              className="flex flex-1 items-center justify-center text-center font-extrabold leading-tight"
-                              style={{
-                                fontFamily: "var(--font-heebo)",
-                                fontSize: "clamp(1.25rem, 2.6vw, 2.1rem)",
-                              }}
-                            >
-                              {opt.text}
-                            </div>
-                            <div
-                              className="self-end text-3xl font-extrabold opacity-70 sm:text-4xl"
-                              style={{ fontFamily: "var(--font-heebo)" }}
-                            >
-                              {idx + 1}
-                            </div>
-                          </motion.div>
-                        );
-                      })}
-                    </motion.div>
-                  ) : (
-                    /* Bar chart — votes filling live + correctness reveal */
-                    <motion.div
-                      key="bars"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.35 }}
-                      className="grid w-full max-w-7xl gap-4 sm:gap-6"
-                      style={{
-                        gridTemplateColumns: `repeat(${currentQuestion.answer_options.length}, minmax(0, 1fr))`,
-                      }}
-                    >
-                      {currentQuestion.answer_options.map((opt, idx) => {
-                        const palette = optionPalette(idx);
-                        const count = voteCounts[opt.id] ?? 0;
-                        const isResults = session.state === "showing_results";
-                        const isCorrect = opt.is_correct;
-                        const dim = isResults && !isCorrect;
-                        const heightPct = isResults
-                          ? (count / maxVote) * 100
-                          : Math.min(
-                              100,
-                              (count / Math.max(1, participants.length)) * 100,
-                            );
+                {/* PARTICIPANTS + START */}
+                <div className="mt-10 text-center">
+                  <div className="eyebrow-mini">חדר המתנה</div>
+                  <p
+                    className="mt-2 font-extrabold"
+                    style={{
+                      color: "var(--gold)",
+                      fontSize: "clamp(1.05rem, 2.4vw, 1.4rem)",
+                    }}
+                  >
+                    <span style={{ fontSize: "1.5em" }}>
+                      {participants.length}
+                    </span>{" "}
+                    משתתפים מחוברים
+                  </p>
 
-                        return (
-                          <div
-                            key={opt.id}
-                            className="flex h-[340px] flex-col items-center justify-end sm:h-[440px] md:h-[500px]"
-                          >
-                            {isResults && isCorrect && (
-                              <motion.div
-                                initial={{ opacity: 0, y: -8, scale: 0.7 }}
-                                animate={{ opacity: 1, y: 0, scale: 1 }}
-                                transition={{ duration: 0.4, delay: 0.2 }}
-                                className="mb-2 rounded-full px-3 py-1 text-xs font-extrabold uppercase sm:text-sm"
-                                style={{
-                                  background: "var(--gold)",
-                                  color: "var(--navy-deep)",
-                                  letterSpacing: "0.15em",
-                                  fontFamily: "var(--font-heebo)",
-                                }}
-                              >
-                                ✓ תשובה נכונה
-                              </motion.div>
-                            )}
-                            <motion.span
-                              key={`cnt-${opt.id}-${count}`}
-                              initial={{ scale: 0.6, opacity: 0 }}
-                              animate={{ scale: 1, opacity: 1 }}
-                              transition={{ duration: 0.25 }}
-                              className="mb-2 font-mono font-extrabold tabular-nums"
-                              style={{
-                                color: "var(--navy)",
-                                opacity: dim ? 0.4 : 1,
-                                fontSize: "clamp(2rem, 3.6vw, 3.4rem)",
-                                fontFamily: "var(--font-heebo)",
-                              }}
-                            >
-                              {count}
-                            </motion.span>
+                  <div className="mx-auto mt-5 flex max-w-3xl flex-wrap justify-center gap-2">
+                    <AnimatePresence initial={false}>
+                      {participants.map((p) => (
+                        <motion.div
+                          key={p.id}
+                          layout
+                          initial={{ opacity: 0, scale: 0.6 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.6 }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 300,
+                            damping: 22,
+                          }}
+                          className="player-chip"
+                        >
+                          <span className="av">
+                            {p.nickname.slice(0, 1).toUpperCase()}
+                          </span>
+                          {p.nickname}
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
 
-                            <div className="flex w-full flex-1 items-end">
-                              <motion.div
-                                className="w-full rounded-t-2xl"
-                                initial={{ height: 0 }}
-                                animate={{ height: `${heightPct}%` }}
-                                transition={{
-                                  duration: 0.7,
-                                  type: "spring",
-                                  stiffness: 100,
-                                  damping: 16,
-                                }}
-                                style={{
-                                  background: `linear-gradient(180deg, ${palette.hex} 0%, ${palette.deep} 100%)`,
-                                  boxShadow: `0 -16px 36px -10px ${palette.hex}55`,
-                                  opacity: dim ? 0.32 : 1,
-                                  outline:
-                                    isResults && isCorrect
-                                      ? `4px solid var(--gold)`
-                                      : "none",
-                                  outlineOffset:
-                                    isResults && isCorrect ? "3px" : 0,
-                                }}
-                              />
-                            </div>
-
-                            {/* Fixed-height label area so every bar shares
-                                the same baseline regardless of how many
-                                lines the option text wraps into. */}
-                            <div
-                              className="mt-4 flex h-[120px] flex-col items-center gap-2.5 sm:h-[140px] md:h-[160px]"
-                              style={{ opacity: dim ? 0.5 : 1 }}
-                            >
-                              <div
-                                className="h-10 w-10 shrink-0 sm:h-12 sm:w-12 md:h-14 md:w-14"
-                                style={{ color: palette.hex }}
-                              >
-                                <OptionShape
-                                  kind={palette.shape}
-                                  className="h-full w-full"
-                                />
-                              </div>
-                              <div
-                                className="text-center font-extrabold leading-tight"
-                                style={{
-                                  color: "var(--navy)",
-                                  fontFamily: "var(--font-heebo)",
-                                  fontSize: "clamp(1.05rem, 1.9vw, 1.55rem)",
-                                }}
-                              >
-                                {opt.text}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-
-                {/* Controls */}
-                <div className="flex flex-wrap items-center justify-center gap-3 pt-4">
-                  {session.state === "question_active" && !isRevealPhase && (
+                  <div className="mt-8 flex flex-col items-center gap-2">
                     <button
-                      onClick={endQuestionNow}
-                      disabled={advancing}
-                      className="rounded-full border-2 px-7 py-3 text-base font-bold transition-all hover:-translate-y-0.5 disabled:opacity-50"
-                      style={{
-                        borderColor: "rgba(23,61,110,0.22)",
-                        color: "var(--navy)",
-                        fontFamily: "var(--font-heebo)",
-                      }}
+                      onClick={startFirst}
+                      disabled={
+                        advancing ||
+                        questions.length === 0 ||
+                        participants.length === 0
+                      }
+                      className="next-btn disabled:opacity-40"
                     >
-                      סיים שאלה עכשיו
+                      להתחלת החידון
+                      <svg viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
                     </button>
-                  )}
-                  {session.state === "showing_results" && (
-                    <div className="flex flex-col items-center gap-2">
-                      <button
-                        onClick={goNext}
-                        disabled={advancing}
-                        className="cta-red rounded-full px-10 py-4 text-lg font-extrabold disabled:opacity-50"
-                        style={{ fontFamily: "var(--font-heebo)" }}
-                      >
-                        {advancing
-                          ? "טוען…"
-                          : isLastQuestion
-                            ? "סיום החידון"
-                            : "השאלה הבאה ←"}
-                      </button>
-                      <KbdHint />
-                    </div>
-                  )}
+                    {participants.length > 0 && <KbdHint />}
+                    {participants.length === 0 && (
+                      <p className="text-xs text-white/40">
+                        הכפתור יופעל אחרי שמשתתף ראשון מצטרף
+                      </p>
+                    )}
+                  </div>
                 </div>
               </motion.section>
             )}
 
-          {/* ---------- ENDED — leaderboard ---------- */}
-          {session.state === "ended" && (
-            <motion.section
-              key="ended"
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -18 }}
-              transition={{ duration: 0.4 }}
-              className="flex w-full max-w-4xl flex-col items-center gap-8"
-            >
-              <div className="text-center">
-                <span className="eyebrow">סוף המסע</span>
-                <h2
-                  className="section-title mt-4"
-                  style={{ fontSize: "clamp(2rem, 5vw, 3.4rem)" }}
-                >
-                  תודה <span className="accent">לכולכם</span>
-                </h2>
-              </div>
+            {/* ---------- QUESTION ACTIVE ---------- */}
+            {session.state === "question_active" && currentQuestion && (
+              <motion.section
+                key={`q-${currentQuestion.id}-active`}
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -18 }}
+                transition={{ duration: 0.4 }}
+                className="w-full max-w-5xl"
+              >
+                <div className="mb-5 flex items-center justify-between text-white">
+                  <span
+                    className="font-bold opacity-80"
+                    style={{ fontFamily: "var(--font-heebo)" }}
+                  >
+                    שאלה {currentIndex + 1} מתוך {questions.length}
+                  </span>
+                  <CountdownRing
+                    remaining={remainingSec}
+                    total={QUESTION_SECONDS}
+                  />
+                </div>
 
-              {(() => {
-                const ranked = [...participants].sort(
-                  (a, b) => (b.score ?? 0) - (a.score ?? 0),
-                );
-                const podium = ranked.slice(0, 3);
-                const rest = ranked.slice(3);
-                const medals = ["🥇", "🥈", "🥉"];
-                return (
-                  <>
-                    {podium.length > 0 && (
-                      <div className="grid w-full gap-4 sm:grid-cols-3">
-                        {podium.map((p, i) => (
-                          <motion.div
-                            key={p.id}
-                            initial={{ opacity: 0, y: 40 }}
-                            animate={{ opacity: 1, y: 0 }}
+                <div className="q-text">{currentQuestion.question_text}</div>
+
+                <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                  {currentQuestion.answer_options.map((opt, idx) => {
+                    const count = voteCounts[opt.id] ?? 0;
+                    return (
+                      <motion.div
+                        key={opt.id}
+                        initial={{ opacity: 0, y: 16, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        transition={{
+                          delay: idx * 0.08,
+                          duration: 0.4,
+                          type: "spring",
+                          stiffness: 180,
+                          damping: 18,
+                        }}
+                        className={`ans-card ${ANS_CLASS[idx]}`}
+                      >
+                        <span className="shape">
+                          <OptionShape index={idx} />
+                        </span>
+                        <span className="label">{opt.text}</span>
+                        {!isRevealPhase && (
+                          <motion.span
+                            key={`cnt-${opt.id}-${count}`}
+                            initial={{ scale: 0.7 }}
+                            animate={{ scale: 1 }}
                             transition={{
-                              delay: (2 - i) * 0.3,
-                              duration: 0.55,
-                              ease: "easeOut",
+                              type: "spring",
+                              stiffness: 280,
+                              damping: 16,
                             }}
-                            className="glass-strong flex flex-col items-center gap-3 rounded-3xl p-6 text-center"
-                            style={{
-                              transform: i === 0 ? "translateY(-12px)" : "none",
-                              boxShadow:
-                                i === 0
-                                  ? "0 30px 60px -20px rgba(4,180,157,0.45)"
-                                  : undefined,
-                            }}
+                            className="cnt"
                           >
-                            <div className="text-4xl">{medals[i]}</div>
-                            <span
-                              className="flex h-20 w-20 items-center justify-center rounded-full text-2xl font-extrabold text-white"
-                              style={{
-                                background:
-                                  "linear-gradient(135deg,var(--teal),var(--navy))",
-                              }}
-                            >
-                              {p.nickname.slice(0, 1)}
-                            </span>
-                            <div
-                              className="text-lg font-bold"
-                              style={{
-                                color: "var(--navy)",
-                                fontFamily: "var(--font-heebo)",
-                              }}
-                            >
-                              {p.nickname}
-                            </div>
-                            <div className="gradient-text text-3xl font-extrabold tabular-nums">
-                              {p.score ?? 0}
-                            </div>
-                          </motion.div>
-                        ))}
-                      </div>
-                    )}
+                            {count}
+                          </motion.span>
+                        )}
+                      </motion.div>
+                    );
+                  })}
+                </div>
 
-                    {rest.length > 0 && (
-                      <ul className="w-full divide-y rounded-3xl glass overflow-hidden">
-                        {rest.map((p, i) => (
-                          <li
-                            key={p.id}
-                            className="flex items-center gap-3 px-5 py-3"
-                          >
-                            <span
-                              className="w-6 text-center text-sm tabular-nums"
-                              style={{ color: "var(--foreground-faint)" }}
-                            >
-                              {i + 4}
-                            </span>
-                            <span
-                              className="flex h-9 w-9 items-center justify-center rounded-full text-sm font-extrabold text-white"
-                              style={{
-                                background:
-                                  "linear-gradient(135deg,var(--teal),var(--navy))",
-                              }}
-                            >
-                              {p.nickname.slice(0, 1)}
-                            </span>
-                            <span
-                              className="flex-1 font-bold"
-                              style={{
-                                color: "var(--navy)",
-                                fontFamily: "var(--font-heebo)",
-                              }}
-                            >
-                              {p.nickname}
-                            </span>
-                            <span
-                              className="text-lg font-extrabold tabular-nums"
-                              style={{ color: "var(--teal-deep)" }}
-                            >
-                              {p.score ?? 0}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </>
-                );
-              })()}
+                {!isRevealPhase && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.4 }}
+                    className="mt-6 flex items-center justify-between text-white/75"
+                    style={{ fontFamily: "var(--font-heebo)" }}
+                  >
+                    <span className="text-sm font-bold">
+                      ענו עד כה:{" "}
+                      <span className="text-white">
+                        {totalVotes}
+                      </span>{" "}
+                      / {participants.length}
+                    </span>
+                    <button
+                      onClick={endQuestionNow}
+                      disabled={advancing}
+                      className="rounded-full border px-5 py-2 text-sm font-bold transition-all hover:-translate-y-0.5 disabled:opacity-50"
+                      style={{
+                        borderColor: "rgba(255,255,255,0.25)",
+                        color: "#fff",
+                      }}
+                    >
+                      סיים שאלה עכשיו
+                    </button>
+                  </motion.div>
+                )}
+              </motion.section>
+            )}
 
-              <div className="flex flex-col items-center gap-2">
-                <button
-                  onClick={startFresh}
-                  className="cta-red rounded-full px-10 py-4 text-lg font-extrabold"
-                  style={{ fontFamily: "var(--font-heebo)" }}
+            {/* ---------- SHOWING RESULTS ---------- */}
+            {session.state === "showing_results" && currentQuestion && (
+              <motion.section
+                key={`q-${currentQuestion.id}-results`}
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -18 }}
+                transition={{ duration: 0.45 }}
+                className="w-full max-w-5xl"
+              >
+                <div className="mb-5 flex items-center justify-between text-white">
+                  <span
+                    className="font-bold opacity-80"
+                    style={{ fontFamily: "var(--font-heebo)" }}
+                  >
+                    תוצאות שאלה {currentIndex + 1}
+                  </span>
+                </div>
+
+                <div
+                  className="q-text"
+                  style={{ fontSize: "clamp(1.1rem, 2.6vw, 1.6rem)" }}
                 >
-                  סיבוב חדש
-                </button>
-                <KbdHint />
-              </div>
-            </motion.section>
-          )}
-        </AnimatePresence>
-      </div>
-    </main>
+                  {currentQuestion.question_text}
+                </div>
+
+                <div
+                  className="mt-6 grid items-end gap-3 sm:gap-4"
+                  style={{
+                    gridTemplateColumns: `repeat(${currentQuestion.answer_options.length}, 1fr)`,
+                    height: 280,
+                  }}
+                >
+                  {currentQuestion.answer_options.map((opt, idx) => {
+                    const count = voteCounts[opt.id] ?? 0;
+                    const pct = (count / maxVote) * 100;
+                    const isCorrect = opt.is_correct;
+                    const dim = !isCorrect;
+                    return (
+                      <div
+                        key={opt.id}
+                        className={`barcol ${BAR_CLASS[idx]} ${isCorrect ? "correct" : ""} ${dim ? "dim" : ""}`}
+                      >
+                        <motion.div
+                          className="bar"
+                          initial={{ height: 0 }}
+                          animate={{ height: `${Math.max(pct, 6)}%` }}
+                          transition={{
+                            duration: 0.9,
+                            type: "spring",
+                            stiffness: 80,
+                            damping: 16,
+                          }}
+                        >
+                          {count}
+                        </motion.div>
+                        <div className="sh-box">
+                          <OptionShape index={idx} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-3 grid gap-3 sm:gap-4"
+                  style={{
+                    gridTemplateColumns: `repeat(${currentQuestion.answer_options.length}, 1fr)`,
+                  }}
+                >
+                  {currentQuestion.answer_options.map((opt) => (
+                    <div
+                      key={opt.id}
+                      className="text-center text-xs font-bold leading-tight sm:text-sm"
+                      style={{
+                        color: opt.is_correct
+                          ? "var(--gold)"
+                          : "rgba(255,255,255,0.6)",
+                        fontFamily: "var(--font-heebo)",
+                      }}
+                    >
+                      {opt.text}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-8 flex flex-col items-center gap-2 text-center">
+                  <button
+                    onClick={goNext}
+                    disabled={advancing}
+                    className="next-btn"
+                  >
+                    {advancing
+                      ? "טוען…"
+                      : isLastQuestion
+                        ? "לתוצאות הסופיות"
+                        : "השאלה הבאה"}
+                    <svg viewBox="0 0 24 24">
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  </button>
+                  <KbdHint />
+                </div>
+              </motion.section>
+            )}
+
+            {/* ---------- ENDED ---------- */}
+            {session.state === "ended" && (
+              <motion.section
+                key="ended"
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -18 }}
+                transition={{ duration: 0.45 }}
+                className="w-full max-w-3xl text-center"
+              >
+                <div
+                  className="mb-3 text-6xl"
+                  style={{ animation: "beat 1.6s ease-in-out infinite" }}
+                >
+                  🏆
+                </div>
+                <h1
+                  className="hero-title"
+                  dir="ltr"
+                  style={{ fontSize: "clamp(2.2rem, 6vw, 3.6rem)" }}
+                >
+                  Beyond the <span className="g">Attack</span>
+                </h1>
+                <p className="mt-2 text-white/80">
+                  כל הכבוד למשתתפים! הנה המובילים:
+                </p>
+
+                {(() => {
+                  const ranked = [...participants].sort(
+                    (a, b) => (b.score ?? 0) - (a.score ?? 0),
+                  );
+                  const podium = ranked.slice(0, 3);
+                  const rest = ranked.slice(3);
+                  // Display silver-gold-bronze in visual order: 2nd, 1st, 3rd
+                  const visualOrder = [1, 0, 2]
+                    .map((rank) =>
+                      podium[rank] ? { p: podium[rank], rank } : null,
+                    )
+                    .filter(
+                      (
+                        v,
+                      ): v is { p: Participant; rank: number } => v !== null,
+                    );
+
+                  return (
+                    <>
+                      <div className="mt-8 flex items-end justify-center gap-4">
+                        {visualOrder.map(({ p, rank }) => {
+                          const cls = `p${rank + 1}` as
+                            | "p1"
+                            | "p2"
+                            | "p3";
+                          return (
+                            <motion.div
+                              key={p.id}
+                              initial={{ opacity: 0, y: 60 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{
+                                duration: 0.6,
+                                delay: (2 - rank) * 0.25,
+                                ease: "easeOut",
+                              }}
+                              className={`pod ${cls}`}
+                            >
+                              <div className="medal">{rank + 1}</div>
+                              <div className="pname">{p.nickname}</div>
+                              <div className="block">{p.score ?? 0}</div>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+
+                      {rest.length > 0 && (
+                        <div className="mx-auto mt-8 flex max-w-xl flex-col gap-2 text-right">
+                          {rest.map((p, i) => (
+                            <motion.div
+                              key={p.id}
+                              initial={{ opacity: 0, x: 12 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{
+                                delay: 0.7 + i * 0.05,
+                              }}
+                              className="lb-row"
+                            >
+                              <span className="lb-rank">{i + 4}</span>
+                              <span className="lb-name">{p.nickname}</span>
+                              <span className="lb-score">
+                                {p.score ?? 0}
+                              </span>
+                            </motion.div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+
+                <div className="mt-10 flex flex-col items-center gap-2">
+                  <button onClick={startFresh} className="next-btn">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M12 5V1L7 6l5 5V7a6 6 0 11-6 6H4a8 8 0 108-8z" />
+                    </svg>
+                    אתגר חדש
+                  </button>
+                  <KbdHint />
+                </div>
+              </motion.section>
+            )}
+          </AnimatePresence>
+        </div>
+      </main>
+    </>
+  );
+}
+
+function EventBackground() {
+  return (
+    <div className="event-bg" aria-hidden>
+      <svg className="s1" viewBox="0 0 1000 1000" fill="none">
+        <path
+          d="M-100 250 Q 300 100 600 280 T 1100 240"
+          stroke="#04b49d"
+          strokeWidth="50"
+          strokeLinecap="round"
+          opacity="0.16"
+        />
+        <path
+          d="M-100 340 Q 300 190 600 370 T 1100 330"
+          stroke="#fec84e"
+          strokeWidth="44"
+          strokeLinecap="round"
+          opacity="0.14"
+        />
+      </svg>
+      <svg className="s2" viewBox="0 0 1000 1000" fill="none">
+        <path
+          d="M-100 700 Q 300 560 600 740 T 1100 690"
+          stroke="#04b49d"
+          strokeWidth="56"
+          strokeLinecap="round"
+          opacity="0.12"
+        />
+      </svg>
+    </div>
   );
 }
 
 function KbdHint() {
   return (
     <div
-      className="flex items-center gap-2 text-xs"
+      className="flex items-center gap-2 text-xs text-white/50"
       style={{
-        color: "var(--foreground-faint)",
         fontFamily: "var(--font-heebo)",
         letterSpacing: "0.05em",
       }}
     >
       <span>גם עם</span>
       <kbd
-        className="rounded-md border px-2 py-0.5 font-mono text-[0.7rem] font-bold"
+        className="rounded-md border px-2 py-0.5 font-mono text-[0.7rem] font-bold text-white"
         style={{
-          borderColor: "rgba(23,61,110,0.18)",
-          color: "var(--navy)",
-          background: "rgba(255,255,255,0.7)",
+          borderColor: "rgba(255,255,255,0.25)",
+          background: "rgba(255,255,255,0.08)",
         }}
       >
         Space
       </kbd>
       <span>או</span>
       <kbd
-        className="rounded-md border px-2 py-0.5 font-mono text-[0.7rem] font-bold"
+        className="rounded-md border px-2 py-0.5 font-mono text-[0.7rem] font-bold text-white"
         style={{
-          borderColor: "rgba(23,61,110,0.18)",
-          color: "var(--navy)",
-          background: "rgba(255,255,255,0.7)",
+          borderColor: "rgba(255,255,255,0.25)",
+          background: "rgba(255,255,255,0.08)",
         }}
       >
         →
@@ -1263,45 +1070,38 @@ function CountdownRing({
   total: number;
 }) {
   const pct = Math.max(0, Math.min(1, remaining / total));
-  const radius = 60;
+  const radius = 36;
   const circ = 2 * Math.PI * radius;
-  const dash = circ * pct;
   const urgent = remaining <= 5;
-  const ringColor = urgent ? "var(--red)" : "var(--teal)";
   return (
-    <div className="relative h-32 w-32">
-      <svg viewBox="0 0 140 140" className="absolute inset-0">
+    <div className={`timer-ring ${urgent ? "urgent" : ""}`}>
+      <svg
+        viewBox="0 0 80 80"
+        className="absolute inset-0"
+        style={{ transform: "rotate(-90deg)" }}
+      >
         <circle
-          cx="70"
-          cy="70"
+          cx="40"
+          cy="40"
           r={radius}
           fill="none"
-          stroke="rgba(23,61,110,0.1)"
-          strokeWidth="10"
+          stroke="rgba(23,61,110,0.12)"
+          strokeWidth="6"
         />
         <motion.circle
-          cx="70"
-          cy="70"
+          cx="40"
+          cy="40"
           r={radius}
           fill="none"
-          stroke={ringColor}
-          strokeWidth="10"
+          stroke={urgent ? "var(--red)" : "var(--teal)"}
+          strokeWidth="6"
           strokeLinecap="round"
-          strokeDasharray={`${circ} ${circ}`}
-          animate={{ strokeDashoffset: circ - dash }}
+          strokeDasharray={circ}
+          animate={{ strokeDashoffset: circ * (1 - pct) }}
           transition={{ duration: 0.3, ease: "linear" }}
-          style={{ transform: "rotate(-90deg)", transformOrigin: "70px 70px" }}
         />
       </svg>
-      <div
-        className="absolute inset-0 flex flex-col items-center justify-center font-mono text-5xl font-extrabold tabular-nums"
-        style={{
-          color: urgent ? "var(--red)" : "var(--navy)",
-          fontFamily: "var(--font-heebo)",
-        }}
-      >
-        {remaining}
-      </div>
+      <span className="relative">{remaining}</span>
     </div>
   );
 }

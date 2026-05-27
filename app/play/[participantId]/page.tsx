@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { AnimatePresence, motion } from "motion/react";
 import { createClient } from "@/lib/supabase/client";
-import { QUESTION_SECONDS, optionPalette } from "@/lib/eventConfig";
+import { QUESTION_SECONDS } from "@/lib/eventConfig";
 import { useNow, remainingSeconds } from "@/lib/timer";
 import type {
   AnswerOption,
@@ -17,41 +17,63 @@ import type {
 
 type FullQuestion = Question & { answer_options: AnswerOption[] };
 
-function OptionShape({
-  kind,
-  className,
-}: {
-  kind: "triangle" | "diamond" | "circle" | "square";
-  className?: string;
-}) {
-  const props = {
-    viewBox: "0 0 100 100",
-    fill: "currentColor",
-    "aria-hidden": true,
-    className,
-  } as const;
-  if (kind === "triangle")
+const ANS_CLASS = ["a0", "a1", "a2", "a3"] as const;
+
+function OptionShape({ index }: { index: number }) {
+  if (index === 0)
     return (
-      <svg {...props}>
-        <polygon points="50,15 92,85 8,85" />
+      <svg viewBox="0 0 32 32">
+        <path d="M16 3l13 26H3z" />
       </svg>
     );
-  if (kind === "diamond")
+  if (index === 1)
     return (
-      <svg {...props}>
-        <polygon points="50,8 92,50 50,92 8,50" />
+      <svg viewBox="0 0 32 32">
+        <path d="M16 2l14 14-14 14L2 16z" />
       </svg>
     );
-  if (kind === "circle")
+  if (index === 2)
     return (
-      <svg {...props}>
-        <circle cx="50" cy="50" r="38" />
+      <svg viewBox="0 0 32 32">
+        <circle cx="16" cy="16" r="14" />
       </svg>
     );
   return (
-    <svg {...props}>
-      <rect x="15" y="15" width="70" height="70" rx="10" />
+    <svg viewBox="0 0 32 32">
+      <rect x="3" y="3" width="26" height="26" rx="3" />
     </svg>
+  );
+}
+
+function EventBackground() {
+  return (
+    <div className="event-bg" aria-hidden>
+      <svg className="s1" viewBox="0 0 1000 1000" fill="none">
+        <path
+          d="M-100 250 Q 300 100 600 280 T 1100 240"
+          stroke="#04b49d"
+          strokeWidth="50"
+          strokeLinecap="round"
+          opacity="0.16"
+        />
+        <path
+          d="M-100 340 Q 300 190 600 370 T 1100 330"
+          stroke="#fec84e"
+          strokeWidth="44"
+          strokeLinecap="round"
+          opacity="0.14"
+        />
+      </svg>
+      <svg className="s2" viewBox="0 0 1000 1000" fill="none">
+        <path
+          d="M-100 700 Q 300 560 600 740 T 1100 690"
+          stroke="#04b49d"
+          strokeWidth="56"
+          strokeLinecap="round"
+          opacity="0.12"
+        />
+      </svg>
+    </div>
   );
 }
 
@@ -66,7 +88,7 @@ export default function PlayerPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // ---- Boot ----
+  // Boot
   useEffect(() => {
     if (!participantId) return;
     let cancelled = false;
@@ -119,7 +141,8 @@ export default function PlayerPage() {
         question_id: string;
         answer_data: { option_id?: string };
       }>) {
-        if (r.answer_data?.option_id) map.set(r.question_id, r.answer_data.option_id);
+        if (r.answer_data?.option_id)
+          map.set(r.question_id, r.answer_data.option_id);
       }
       setMyAnswers(map);
     })();
@@ -128,7 +151,7 @@ export default function PlayerPage() {
     };
   }, [participantId, supabase]);
 
-  // ---- Realtime — session + my participant updates ----
+  // Realtime
   useEffect(() => {
     if (!session || !me) return;
     const channel = supabase
@@ -176,7 +199,7 @@ export default function PlayerPage() {
     : 0;
 
   const myAnswer = currentQuestion
-    ? myAnswers.get(currentQuestion.id) ?? null
+    ? (myAnswers.get(currentQuestion.id) ?? null)
     : null;
 
   async function submitAnswer(optionId: string) {
@@ -196,7 +219,6 @@ export default function PlayerPage() {
       answer_data: { option_id: optionId },
     });
     if (insErr) {
-      // Rollback optimistic state if the insert failed
       setMyAnswers((prev) => {
         const next = new Map(prev);
         next.delete(currentQuestion.id);
@@ -209,332 +231,275 @@ export default function PlayerPage() {
 
   if (error) {
     return (
-      <main className="flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
-        <p style={{ color: "var(--red)" }} className="font-bold">
-          {error}
-        </p>
-        <Link
-          href="/join"
-          className="text-sm hover:opacity-70"
-          style={{ color: "var(--foreground-muted)" }}
-        >
-          חזרה לעמוד ההצטרפות
-        </Link>
-      </main>
+      <>
+        <EventBackground />
+        <main className="relative z-10 flex min-h-screen flex-col items-center justify-center gap-4 p-8 text-center">
+          <p className="font-bold" style={{ color: "var(--gold)" }}>
+            {error}
+          </p>
+          <Link
+            href="/join"
+            className="text-sm text-white/70 hover:opacity-80"
+          >
+            חזרה לעמוד ההצטרפות
+          </Link>
+        </main>
+      </>
     );
   }
 
   if (!session || !me) {
     return (
-      <main
-        className="flex flex-1 items-center justify-center p-8"
-        style={{ color: "var(--foreground-faint)" }}
-      >
-        טוען…
-      </main>
+      <>
+        <EventBackground />
+        <main className="relative z-10 flex min-h-screen items-center justify-center p-8 text-white/55">
+          טוען…
+        </main>
+      </>
     );
   }
 
+  const lastQuestionAnswered =
+    questions.length > 0 &&
+    myAnswers.has(questions[questions.length - 1].id);
+
   return (
-    <main className="relative flex min-h-screen flex-1 flex-col">
-      {/* Top — name + score */}
-      <header className="flex items-center justify-between px-5 py-4">
-        <Image
-          src="/csl-logo.png"
-          alt="CSL"
-          width={120}
-          height={30}
-          priority
-          className="h-7 w-auto"
-        />
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <div
-              className="text-xs font-bold uppercase"
-              style={{
-                color: "var(--foreground-muted)",
-                letterSpacing: "0.18em",
-              }}
-            >
-              שלום
-            </div>
-            <div
-              className="text-base font-extrabold"
-              style={{ color: "var(--navy)", fontFamily: "var(--font-heebo)" }}
-            >
-              {me.nickname}
-            </div>
+    <>
+      <EventBackground />
+      <main className="relative z-10 flex min-h-screen flex-col">
+        {/* TOPBAR */}
+        <header className="flex items-center justify-between px-5 py-4 sm:px-8">
+          <Image
+            src="/csl-logo.png"
+            alt="CSL"
+            width={120}
+            height={26}
+            priority
+            className="h-6 w-auto rounded-md bg-white px-2 py-1"
+          />
+          <div className="flex items-center gap-2">
+            <span className="viewtag teal">{me.nickname}</span>
           </div>
-          <span
-            className="flex h-12 w-12 items-center justify-center rounded-full text-lg font-extrabold text-white"
-            style={{
-              background: "linear-gradient(135deg,var(--teal),var(--navy))",
-            }}
-          >
-            {me.nickname.slice(0, 1)}
-          </span>
-        </div>
-      </header>
+        </header>
 
-      <div className="flex flex-1 flex-col items-center justify-center px-5 pb-10">
-        <AnimatePresence mode="wait">
-          {/* ---------- WAITING ---------- */}
-          {session.state === "waiting" && (
-            <motion.section
-              key="waiting"
-              initial={{ opacity: 0, y: 14 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -14 }}
-              transition={{ duration: 0.4 }}
-              className="flex flex-col items-center gap-7 text-center"
-            >
-              <div className="relative h-24 w-24">
-                <motion.span
-                  className="absolute inset-0 rounded-full"
-                  style={{
-                    background:
-                      "linear-gradient(135deg,var(--teal),var(--navy))",
-                    opacity: 0.3,
-                  }}
-                  animate={{ scale: [1, 1.4, 1], opacity: [0.3, 0, 0.3] }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeOut",
-                  }}
-                />
-                <span
-                  className="absolute inset-3 rounded-full"
-                  style={{
-                    background:
-                      "linear-gradient(135deg,var(--teal),var(--navy))",
-                  }}
-                />
-              </div>
-              <div>
+        <div className="flex flex-1 flex-col items-center justify-center px-5 pb-8">
+          <AnimatePresence mode="wait">
+            {/* ---------- WAITING ---------- */}
+            {session.state === "waiting" && (
+              <motion.section
+                key="waiting"
+                initial={{ opacity: 0, y: 14 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -14 }}
+                transition={{ duration: 0.4 }}
+                className="flex flex-col items-center gap-6 text-center"
+              >
+                <div className="pulse-orb">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 15h-2v-2h2zm0-4h-2V7h2z" />
+                  </svg>
+                </div>
                 <h2
-                  className="section-title text-3xl sm:text-4xl"
-                  style={{ fontFamily: "var(--font-heebo)" }}
-                >
-                  כל הכבוד, <span className="accent">הצטרפת!</span>
-                </h2>
-                <p
-                  className="mt-3 text-base"
-                  style={{ color: "var(--foreground-muted)" }}
-                >
-                  ממתינים שהמנחה יתחיל את החידון…
-                </p>
-              </div>
-            </motion.section>
-          )}
-
-          {/* ---------- QUESTION ACTIVE ---------- */}
-          {session.state === "question_active" && currentQuestion && (
-            <motion.section
-              key={`q-${currentQuestion.id}`}
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -18 }}
-              transition={{ duration: 0.45 }}
-              className="flex w-full max-w-md flex-col items-center gap-6"
-            >
-              <div className="flex w-full items-center justify-between">
-                <span
-                  className="text-xs font-bold uppercase"
+                  className="text-3xl font-extrabold"
                   style={{
-                    color: "var(--foreground-muted)",
-                    letterSpacing: "0.25em",
+                    color: "#fff",
                     fontFamily: "var(--font-heebo)",
                   }}
                 >
-                  שאלה {currentIndex + 1} / {questions.length}
-                </span>
-                <motion.span
-                  key={`t-${remaining}`}
-                  initial={{ scale: 0.7, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 0.18 }}
-                  className="font-mono text-3xl font-extrabold tabular-nums"
+                  נכנסת לחידון!
+                </h2>
+                <p className="text-base text-white/70">
+                  ממתינים שהמנחה יתחיל…
+                </p>
+                <span
+                  className="rounded-full px-5 py-2 text-base font-extrabold"
                   style={{
-                    color: remaining <= 5 ? "var(--red)" : "var(--teal-deep)",
+                    background: "var(--mint)",
+                    color: "var(--teal-deep)",
                   }}
                 >
-                  {remaining}
-                </motion.span>
-              </div>
+                  {me.nickname}
+                </span>
+              </motion.section>
+            )}
 
-              <h2
-                className="text-center text-2xl font-bold leading-tight sm:text-3xl"
-                style={{
-                  color: "var(--navy)",
-                  fontFamily: "var(--font-heebo)",
-                }}
-              >
-                {currentQuestion.question_text}
-              </h2>
+            {/* ---------- QUESTION ACTIVE — choose answer ---------- */}
+            {session.state === "question_active" &&
+              currentQuestion &&
+              !myAnswer && (
+                <motion.section
+                  key={`q-${currentQuestion.id}-pick`}
+                  initial={{ opacity: 0, y: 18 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -18 }}
+                  transition={{ duration: 0.4 }}
+                  className="flex w-full max-w-md flex-col gap-4"
+                >
+                  <div className="flex items-center justify-between text-white/75">
+                    <span
+                      className="text-sm font-bold"
+                      style={{ fontFamily: "var(--font-heebo)" }}
+                    >
+                      שאלה {currentIndex + 1} / {questions.length}
+                    </span>
+                    <motion.span
+                      key={`t-${remaining}`}
+                      initial={{ scale: 0.7 }}
+                      animate={{ scale: 1 }}
+                      transition={{ duration: 0.18 }}
+                      className="font-mono text-2xl font-extrabold tabular-nums"
+                      style={{
+                        color: remaining <= 5 ? "var(--red)" : "var(--gold)",
+                      }}
+                    >
+                      {remaining}
+                    </motion.span>
+                  </div>
 
-              {myAnswer ? (
-                <SubmittedConfirm />
-              ) : (
-                <div className="grid w-full grid-cols-2 gap-3">
-                  {currentQuestion.answer_options.map((opt, idx) => {
-                    const palette = optionPalette(idx);
-                    return (
+                  <div
+                    className="q-text"
+                    style={{ fontSize: "clamp(1.1rem, 4vw, 1.5rem)" }}
+                  >
+                    {currentQuestion.question_text}
+                  </div>
+
+                  <div className="mt-2 grid grid-cols-2 gap-3">
+                    {currentQuestion.answer_options.map((opt, idx) => (
                       <motion.button
                         key={opt.id}
                         onClick={() => submitAnswer(opt.id)}
                         disabled={submitting}
                         whileTap={{ scale: 0.94 }}
-                        whileHover={{ y: -2 }}
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.06, duration: 0.35 }}
-                        className="relative flex aspect-square flex-col items-center justify-between rounded-3xl p-4 text-white shadow-xl active:shadow-md disabled:opacity-60"
-                        style={{
-                          background: `linear-gradient(140deg, ${palette.hex} 0%, ${palette.deep} 100%)`,
-                          boxShadow: `0 18px 40px -12px ${palette.hex}88`,
+                        transition={{
+                          delay: idx * 0.06,
+                          duration: 0.35,
                         }}
+                        className={`ans-card tappable ${ANS_CLASS[idx]} flex aspect-square flex-col items-center justify-center gap-2 text-center disabled:opacity-60`}
                       >
-                        <div className="h-9 w-9 self-start opacity-80">
-                          <OptionShape
-                            kind={palette.shape}
-                            className="h-full w-full"
-                          />
-                        </div>
-                        <div
-                          className="text-center text-base font-bold leading-tight sm:text-lg"
-                          style={{ fontFamily: "var(--font-heebo)" }}
+                        <span className="shape h-9 w-9">
+                          <OptionShape index={idx} />
+                        </span>
+                        <span
+                          className="label text-base font-bold leading-tight"
+                          style={{
+                            textAlign: "center",
+                            fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)",
+                          }}
                         >
                           {opt.text}
-                        </div>
-                        <div
-                          className="self-end text-xs font-bold uppercase opacity-70"
-                          style={{ letterSpacing: "0.18em" }}
-                        >
-                          {idx + 1}
-                        </div>
+                        </span>
                       </motion.button>
-                    );
-                  })}
-                </div>
+                    ))}
+                  </div>
+                </motion.section>
               )}
-            </motion.section>
-          )}
 
-          {/* ---------- SHOWING RESULTS ---------- */}
-          {session.state === "showing_results" && currentQuestion && (
-            <motion.section
-              key={`r-${currentQuestion.id}`}
-              initial={{ opacity: 0, y: 18 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -18 }}
-              transition={{ duration: 0.45 }}
-              className="flex flex-col items-center gap-6 text-center"
-            >
-              <AnswerOutcome
-                myAnswer={myAnswer}
-                options={currentQuestion.answer_options}
-              />
-              <p
-                className="max-w-sm text-base"
-                style={{ color: "var(--foreground-muted)" }}
-              >
-                הסתכלו על המסך הגדול לתוצאות ולשיחה ↑
-              </p>
-            </motion.section>
-          )}
+            {/* ---------- QUESTION ACTIVE — locked (answered) ---------- */}
+            {session.state === "question_active" &&
+              currentQuestion &&
+              myAnswer && (
+                <motion.section
+                  key={`q-${currentQuestion.id}-locked`}
+                  initial={{ opacity: 0, scale: 0.92 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.92 }}
+                  transition={{
+                    type: "spring",
+                    stiffness: 220,
+                    damping: 20,
+                  }}
+                  className="flex flex-col items-center gap-6 text-center"
+                >
+                  <div className="pulse-orb gold">
+                    <svg viewBox="0 0 24 24">
+                      <path d="M9 16.2l-3.5-3.5L4 14.2 9 19l11-11-1.4-1.4z" />
+                    </svg>
+                  </div>
+                  <h3
+                    className="text-2xl font-extrabold text-white"
+                    style={{ fontFamily: "var(--font-heebo)" }}
+                  >
+                    התשובה נקלטה!
+                  </h3>
+                  <p className="text-base text-white/70">
+                    ממתינים לסיום הזמן…
+                  </p>
+                </motion.section>
+              )}
 
-          {/* ---------- ENDED ---------- */}
-          {session.state === "ended" && (
-            <motion.section
-              key="ended"
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-              transition={{ duration: 0.4 }}
-              className="flex flex-col items-center gap-6 text-center"
-            >
-              <div className="text-7xl">🏁</div>
-              <h2
-                className="section-title text-3xl"
-                style={{ fontFamily: "var(--font-heebo)" }}
+            {/* ---------- SHOWING RESULTS — personal outcome ---------- */}
+            {session.state === "showing_results" && currentQuestion && (
+              <motion.section
+                key={`r-${currentQuestion.id}`}
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -18 }}
+                transition={{ duration: 0.45 }}
+                className="flex flex-col items-center gap-5 text-center"
               >
-                סיימנו · <span className="accent">תודה!</span>
-              </h2>
-              <div className="glass-strong rounded-3xl px-10 py-7">
+                <AnswerOutcome
+                  myAnswer={myAnswer}
+                  options={currentQuestion.answer_options}
+                />
+                <p className="max-w-sm text-sm text-white/65">
+                  הסתכלו על המסך הגדול לתוצאות ולשיחה ↑
+                </p>
+              </motion.section>
+            )}
+
+            {/* ---------- ENDED ---------- */}
+            {session.state === "ended" && (
+              <motion.section
+                key="ended"
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -16 }}
+                transition={{ duration: 0.4 }}
+                className="flex flex-col items-center gap-5 text-center"
+              >
                 <div
-                  className="text-xs font-bold uppercase"
+                  className="text-7xl"
+                  style={{ animation: "beat 1.6s ease-in-out infinite" }}
+                >
+                  🎉
+                </div>
+                <h2
+                  className="text-2xl font-extrabold text-white"
+                  style={{ fontFamily: "var(--font-heebo)" }}
+                >
+                  {lastQuestionAnswered ? "סיימת את החידון!" : "תודה שהצטרפת!"}
+                </h2>
+                <div
+                  className="rounded-2xl px-7 py-5"
                   style={{
-                    color: "var(--foreground-muted)",
-                    letterSpacing: "0.25em",
-                    fontFamily: "var(--font-heebo)",
+                    background: "rgba(255,255,255,0.1)",
+                    border: "1px solid rgba(255,255,255,0.18)",
                   }}
                 >
-                  הניקוד שלך
+                  <div
+                    className="text-xs font-bold uppercase"
+                    style={{
+                      color: "rgba(255,255,255,0.6)",
+                      letterSpacing: "0.2em",
+                    }}
+                  >
+                    הניקוד שלך
+                  </div>
+                  <div className="gradient-text mt-1 text-5xl font-extrabold tabular-nums">
+                    {me.score ?? 0}
+                  </div>
                 </div>
-                <div className="gradient-text mt-2 text-6xl font-extrabold tabular-nums">
-                  {me.score ?? 0}
-                </div>
-              </div>
-              <p
-                className="max-w-sm text-base"
-                style={{ color: "var(--foreground-muted)" }}
-              >
-                הדירוג המלא מוצג על המסך הגדול.
-              </p>
-            </motion.section>
-          )}
-        </AnimatePresence>
-      </div>
-    </main>
-  );
-}
-
-function SubmittedConfirm() {
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.8 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ type: "spring", stiffness: 220, damping: 18 }}
-      className="flex w-full flex-col items-center gap-5 py-6"
-    >
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1, rotate: [0, -8, 8, 0] }}
-        transition={{ duration: 0.6, ease: "easeOut" }}
-        className="flex h-28 w-28 items-center justify-center rounded-full text-white"
-        style={{
-          background: "linear-gradient(135deg,var(--teal),var(--teal-deep))",
-          boxShadow: "0 24px 50px -16px rgba(4,180,157,0.55)",
-        }}
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth={3}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          className="h-14 w-14"
-        >
-          <path d="M20 6L9 17l-5-5" />
-        </svg>
-      </motion.div>
-      <div>
-        <p
-          className="text-2xl font-extrabold"
-          style={{ color: "var(--navy)", fontFamily: "var(--font-heebo)" }}
-        >
-          התשובה התקבלה!
-        </p>
-        <p
-          className="mt-1 text-sm"
-          style={{ color: "var(--foreground-muted)" }}
-        >
-          ממתינים לסיום הזמן…
-        </p>
-      </div>
-    </motion.div>
+                <p className="max-w-sm text-sm text-white/65">
+                  הדירוג המלא מוצג על המסך הגדול.
+                </p>
+              </motion.section>
+            )}
+          </AnimatePresence>
+        </div>
+      </main>
+    </>
   );
 }
 
@@ -558,42 +523,54 @@ function AnswerOutcome({
       className="flex flex-col items-center gap-4"
     >
       <div
-        className="flex h-32 w-32 items-center justify-center rounded-full text-white text-6xl"
+        className="flex h-28 w-28 items-center justify-center rounded-full text-white"
         style={{
           background: didNotAnswer
             ? "linear-gradient(135deg,#94a3b8,#475569)"
             : isRight
               ? "linear-gradient(135deg,var(--teal),var(--teal-deep))"
-              : "linear-gradient(135deg,var(--red),#c81419)",
+              : "linear-gradient(135deg,#9aa6b2,#6b7785)",
           boxShadow: isRight
-            ? "0 30px 60px -16px rgba(4,180,157,0.6)"
-            : didNotAnswer
-              ? "0 30px 60px -16px rgba(100,116,139,0.45)"
-              : "0 30px 60px -16px rgba(238,35,41,0.5)",
+            ? "0 24px 50px -16px rgba(4,180,157,0.55)"
+            : "0 24px 50px -16px rgba(100,116,139,0.45)",
         }}
       >
-        {didNotAnswer ? "⏱" : isRight ? "✓" : "✗"}
-      </div>
-      <div>
-        <p
-          className="text-3xl font-extrabold"
-          style={{ color: "var(--navy)", fontFamily: "var(--font-heebo)" }}
-        >
-          {didNotAnswer
-            ? "לא הספקת לענות"
-            : isRight
-              ? "צדקת!"
-              : "טעית הפעם"}
-        </p>
-        {correct && (
-          <p
-            className="mt-2 text-base"
-            style={{ color: "var(--foreground-muted)" }}
-          >
-            התשובה הנכונה: <span style={{ color: "var(--teal-deep)", fontWeight: 700 }}>{correct.text}</span>
-          </p>
+        {didNotAnswer ? (
+          <span className="text-5xl">⏱</span>
+        ) : isRight ? (
+          <svg viewBox="0 0 24 24" className="h-14 w-14" fill="#fff">
+            <path d="M9 16.2l-3.5-3.5L4 14.2 9 19l11-11-1.4-1.4z" />
+          </svg>
+        ) : (
+          <svg viewBox="0 0 24 24" className="h-14 w-14" fill="#fff">
+            <path d="M19 6.4L17.6 5 12 10.6 6.4 5 5 6.4 10.6 12 5 17.6 6.4 19 12 13.4 17.6 19 19 17.6 13.4 12z" />
+          </svg>
         )}
       </div>
+      <h3
+        className="text-2xl font-extrabold text-white"
+        style={{ fontFamily: "var(--font-heebo)" }}
+      >
+        {didNotAnswer
+          ? "לא הספקת לענות"
+          : isRight
+            ? "תשובה נכונה! 🎯"
+            : "לא נכון הפעם"}
+      </h3>
+      {correct && (
+        <div
+          className="rounded-2xl px-4 py-3 text-sm font-bold"
+          style={{
+            background: "rgba(255,255,255,0.1)",
+            color: "#fff",
+            border: "1px solid rgba(255,255,255,0.18)",
+            maxWidth: "320px",
+          }}
+        >
+          <span style={{ color: "var(--gold)" }}>תשובה נכונה:</span>{" "}
+          {correct.text}
+        </div>
+      )}
     </motion.div>
   );
 }

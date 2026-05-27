@@ -58,7 +58,7 @@ export default function AdminIndexPage() {
   }
 
   return (
-    <main className="flex flex-1 flex-col items-center gap-10 p-8 pt-24">
+    <main className="light-stage flex flex-1 flex-col items-center gap-10 p-8 pt-24">
       <header className="text-center">
         <span className="eyebrow">ניהול תוכן</span>
         <h1 className="section-title mt-4 text-4xl sm:text-5xl">
