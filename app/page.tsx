@@ -494,17 +494,17 @@ export default function EventHostPage() {
   return (
     <>
       <EventBackground />
-      <main className="relative z-10 flex min-h-screen flex-col">
+      <main className="relative z-10 flex h-screen flex-col overflow-hidden">
         {/* TOPBAR — public-facing, so no role label */}
-        <header className="flex items-center justify-between px-6 py-5 sm:px-12 sm:py-7">
-          <div className="flex items-center gap-5 sm:gap-7">
+        <header className="flex items-center justify-between px-6 py-4 sm:px-10">
+          <div className="flex items-center gap-5 sm:gap-6">
             <Image
               src="/csl-logo.png"
               alt="CSL"
               width={180}
               height={42}
               priority
-              className="h-10 w-auto rounded-lg bg-white px-3 py-1.5 sm:h-12"
+              className="h-9 w-auto rounded-lg bg-white px-2.5 py-1 sm:h-10"
             />
             <Image
               src="/andembry-logo.png"
@@ -512,13 +512,13 @@ export default function EventHostPage() {
               width={200}
               height={40}
               priority
-              className="h-9 w-auto opacity-95 brightness-0 invert sm:h-11"
+              className="h-8 w-auto opacity-95 brightness-0 invert sm:h-9"
             />
           </div>
         </header>
 
         {/* STAGE */}
-        <div className="flex flex-1 flex-col items-center justify-center px-4 pb-12 sm:px-10">
+        <div className="flex flex-1 flex-col items-center justify-center px-4 pb-4 sm:px-8 sm:pb-6">
           <AnimatePresence mode="wait">
             {/* ---------- WAITING ---------- */}
             {session.state === "waiting" && (
@@ -535,92 +535,61 @@ export default function EventHostPage() {
                   <div className="text-right">
                     <div
                       className="eyebrow-mini"
-                      style={{ fontSize: "0.85rem", letterSpacing: "0.3em" }}
+                      style={{ fontSize: "0.78rem", letterSpacing: "0.28em" }}
                     >
                       חידון HAE אינטראקטיבי
                     </div>
                     <h1
-                      className="hero-title mt-3"
+                      className="hero-title mt-2"
                       dir="ltr"
                       style={{
                         textAlign: "right",
-                        fontSize: "clamp(3rem, 7.5vw, 5.8rem)",
+                        fontSize: "clamp(2.4rem, 5.5vw, 4.4rem)",
                       }}
                     >
                       Beyond <span className="g">the</span> Attack
                     </h1>
                     <p
-                      className="mt-4 max-w-md"
+                      className="mt-2 max-w-md"
                       style={{
                         color: "rgba(255,255,255,0.85)",
-                        fontSize: "clamp(1.1rem, 2.2vw, 1.4rem)",
+                        fontSize: "clamp(0.95rem, 1.4vw, 1.1rem)",
+                        lineHeight: 1.45,
                       }}
                     >
                       סרקו את הקוד עם הנייד, הצטרפו לחידון ובדקו את הידע שלכם
                       על HAE ועל <span dir="ltr">Andembry</span>.
                     </p>
 
-                    <div className="mt-8 flex flex-col gap-4">
+                    <div className="mt-5 flex flex-col gap-2.5">
                       <div
-                        className="flex items-center gap-4 font-semibold text-white/90"
-                        style={{ fontSize: "clamp(1rem, 1.8vw, 1.2rem)" }}
+                        className="flex items-center gap-3 font-semibold text-white/90"
+                        style={{ fontSize: "clamp(0.95rem, 1.3vw, 1.05rem)" }}
                       >
-                        <span
-                          className="step-num"
-                          style={{
-                            width: 38,
-                            height: 38,
-                            fontSize: "1.05rem",
-                          }}
-                        >
-                          1
-                        </span>
+                        <span className="step-num">1</span>
                         פותחים את מצלמת הנייד
                       </div>
                       <div
-                        className="flex items-center gap-4 font-semibold text-white/90"
-                        style={{ fontSize: "clamp(1rem, 1.8vw, 1.2rem)" }}
+                        className="flex items-center gap-3 font-semibold text-white/90"
+                        style={{ fontSize: "clamp(0.95rem, 1.3vw, 1.05rem)" }}
                       >
-                        <span
-                          className="step-num s2"
-                          style={{
-                            width: 38,
-                            height: 38,
-                            fontSize: "1.05rem",
-                          }}
-                        >
-                          2
-                        </span>
+                        <span className="step-num s2">2</span>
                         סורקים את קוד ה-QR
                       </div>
                       <div
-                        className="flex items-center gap-4 font-semibold text-white/90"
-                        style={{ fontSize: "clamp(1rem, 1.8vw, 1.2rem)" }}
+                        className="flex items-center gap-3 font-semibold text-white/90"
+                        style={{ fontSize: "clamp(0.95rem, 1.3vw, 1.05rem)" }}
                       >
-                        <span
-                          className="step-num s3"
-                          style={{
-                            width: 38,
-                            height: 38,
-                            fontSize: "1.05rem",
-                          }}
-                        >
-                          3
-                        </span>
+                        <span className="step-num s3">3</span>
                         מזינים שם ומצטרפים
                       </div>
                     </div>
 
-                    <div className="pin-box mt-8" style={{ padding: "26px 32px" }}>
-                      <span
-                        className="lbl"
-                        style={{ fontSize: "0.85rem", letterSpacing: "0.22em" }}
-                      >
-                        או הצטרפות עם קוד
-                      </span>
+                    <div className="pin-box mt-5" style={{ padding: "16px 22px" }}>
+                      <span className="lbl">או הצטרפות עם קוד</span>
                       <span
                         className="pin"
-                        style={{ fontSize: "clamp(3rem, 7vw, 4.6rem)" }}
+                        style={{ fontSize: "clamp(2.2rem, 5vw, 3.3rem)" }}
                       >
                         {formattedCode}
                       </span>
@@ -634,28 +603,28 @@ export default function EventHostPage() {
                     transition={{ duration: 0.5, delay: 0.15 }}
                     className="mx-auto"
                   >
-                    <div className="qr-card" style={{ padding: 36 }}>
+                    <div className="qr-card" style={{ padding: 24 }}>
                       <div
                         className="qtitle"
-                        style={{ fontSize: "1.5rem", marginBottom: 6 }}
+                        style={{ fontSize: "1.2rem", marginBottom: 4 }}
                       >
                         סרקו להצטרפות
                       </div>
                       <div
                         className="qsub"
                         dir="ltr"
-                        style={{ fontSize: "1.05rem", marginBottom: 20 }}
+                        style={{ fontSize: "0.92rem", marginBottom: 14 }}
                       >
                         {origin && origin.replace(/^https?:\/\//, "")}/join
                       </div>
                       <div
                         className="qr-wrap"
-                        style={{ width: "min(340px, 70vw)" }}
+                        style={{ width: "min(280px, 60vw)", padding: 10 }}
                       >
                         {joinUrl ? (
                           <QRCodeSVG
                             value={joinUrl}
-                            size={320}
+                            size={260}
                             level="M"
                             marginSize={0}
                             bgColor="#ffffff"
@@ -669,53 +638,57 @@ export default function EventHostPage() {
                   </motion.div>
                 </div>
 
-                {/* PARTICIPANTS + START */}
-                <div className="mt-12 text-center">
-                  <div
-                    className="eyebrow-mini"
-                    style={{ fontSize: "0.85rem", letterSpacing: "0.3em" }}
-                  >
-                    חדר המתנה
-                  </div>
+                {/* PARTICIPANTS + START — compact */}
+                <div className="mt-5 flex flex-col items-center gap-3 text-center">
                   <p
-                    className="mt-3 font-extrabold"
+                    className="font-extrabold"
                     style={{
                       color: "var(--gold)",
-                      fontSize: "clamp(1.25rem, 2.8vw, 1.7rem)",
+                      fontSize: "1.05rem",
                     }}
                   >
-                    <span style={{ fontSize: "1.6em" }}>
+                    <span style={{ fontSize: "1.5em" }}>
                       {participants.length}
                     </span>{" "}
                     משתתפים מחוברים
                   </p>
 
-                  <div className="mx-auto mt-5 flex max-w-3xl flex-wrap justify-center gap-2">
-                    <AnimatePresence initial={false}>
-                      {participants.map((p) => (
-                        <motion.div
-                          key={p.id}
-                          layout
-                          initial={{ opacity: 0, scale: 0.6 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          exit={{ opacity: 0, scale: 0.6 }}
-                          transition={{
-                            type: "spring",
-                            stiffness: 300,
-                            damping: 22,
-                          }}
-                          className="player-chip"
-                        >
-                          <span className="av">
-                            {p.nickname.slice(0, 1).toUpperCase()}
-                          </span>
-                          {p.nickname}
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
-                  </div>
+                  {participants.length > 0 && (
+                    <div className="mx-auto flex max-w-4xl flex-wrap justify-center gap-2">
+                      <AnimatePresence initial={false}>
+                        {participants.map((p) => (
+                          <motion.div
+                            key={p.id}
+                            layout
+                            initial={{ opacity: 0, scale: 0.6 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.6 }}
+                            transition={{
+                              type: "spring",
+                              stiffness: 300,
+                              damping: 22,
+                            }}
+                            className="player-chip"
+                            style={{ fontSize: "0.95rem", padding: "8px 16px" }}
+                          >
+                            <span
+                              className="av"
+                              style={{
+                                width: 24,
+                                height: 24,
+                                fontSize: "0.78rem",
+                              }}
+                            >
+                              {p.nickname.slice(0, 1).toUpperCase()}
+                            </span>
+                            {p.nickname}
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
+                    </div>
+                  )}
 
-                  <div className="mt-8 flex flex-col items-center gap-2">
+                  <div className="flex items-center gap-4">
                     <button
                       onClick={startFirst}
                       disabled={
@@ -724,6 +697,7 @@ export default function EventHostPage() {
                         participants.length === 0
                       }
                       className="next-btn disabled:opacity-40"
+                      style={{ padding: "12px 30px", fontSize: "1.05rem" }}
                     >
                       להתחלת החידון
                       <svg viewBox="0 0 24 24">
@@ -731,12 +705,12 @@ export default function EventHostPage() {
                       </svg>
                     </button>
                     {participants.length > 0 && <KbdHint />}
-                    {participants.length === 0 && (
-                      <p className="text-xs text-white/40">
-                        הכפתור יופעל אחרי שמשתתף ראשון מצטרף
-                      </p>
-                    )}
                   </div>
+                  {participants.length === 0 && (
+                    <p className="text-xs text-white/45">
+                      הכפתור יופעל אחרי שמשתתף ראשון מצטרף
+                    </p>
+                  )}
                 </div>
               </motion.section>
             )}
@@ -751,7 +725,7 @@ export default function EventHostPage() {
                 transition={{ duration: 0.4 }}
                 className="w-full max-w-6xl"
               >
-                <div className="mb-6 flex items-center justify-between text-white">
+                <div className="mb-4 flex items-center justify-between text-white">
                   <span
                     className="font-bold opacity-85"
                     style={{
@@ -769,7 +743,7 @@ export default function EventHostPage() {
 
                 <div className="q-text">{currentQuestion.question_text}</div>
 
-                <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5">
+                <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                   {currentQuestion.answer_options.map((opt, idx) => {
                     const count = voteCounts[opt.id] ?? 0;
                     return (
@@ -815,12 +789,12 @@ export default function EventHostPage() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ duration: 0.4 }}
-                    className="mt-7 flex items-center justify-between text-white/75"
+                    className="mt-4 flex items-center justify-between text-white/75"
                     style={{ fontFamily: "var(--font-heebo)" }}
                   >
                     <span
                       className="font-bold"
-                      style={{ fontSize: "clamp(1rem, 1.7vw, 1.2rem)" }}
+                      style={{ fontSize: "clamp(0.95rem, 1.5vw, 1.15rem)" }}
                     >
                       ענו עד כה:{" "}
                       <span className="text-white">{totalVotes}</span> /{" "}
@@ -829,11 +803,11 @@ export default function EventHostPage() {
                     <button
                       onClick={endQuestionNow}
                       disabled={advancing}
-                      className="rounded-full border px-6 py-2.5 font-bold transition-all hover:-translate-y-0.5 disabled:opacity-50"
+                      className="rounded-full border px-5 py-2 font-bold transition-all hover:-translate-y-0.5 disabled:opacity-50"
                       style={{
                         borderColor: "rgba(255,255,255,0.25)",
                         color: "#fff",
-                        fontSize: "1rem",
+                        fontSize: "0.95rem",
                       }}
                     >
                       סיים שאלה עכשיו
@@ -853,7 +827,7 @@ export default function EventHostPage() {
                 transition={{ duration: 0.45 }}
                 className="w-full max-w-6xl"
               >
-                <div className="mb-6 flex items-center justify-between text-white">
+                <div className="mb-4 flex items-center justify-between text-white">
                   <span
                     className="font-bold opacity-85"
                     style={{
@@ -867,16 +841,16 @@ export default function EventHostPage() {
 
                 <div
                   className="q-text"
-                  style={{ fontSize: "clamp(1.35rem, 3vw, 2rem)" }}
+                  style={{ fontSize: "clamp(1.2rem, 2.5vw, 1.75rem)" }}
                 >
                   {currentQuestion.question_text}
                 </div>
 
                 <div
-                  className="mt-7 grid items-end gap-3 sm:gap-5"
+                  className="mt-5 grid items-end gap-3 sm:gap-5"
                   style={{
                     gridTemplateColumns: `repeat(${currentQuestion.answer_options.length}, 1fr)`,
-                    height: 340,
+                    height: "min(40vh, 290px)",
                   }}
                 >
                   {currentQuestion.answer_options.map((opt, idx) => {
@@ -933,11 +907,12 @@ export default function EventHostPage() {
                   ))}
                 </div>
 
-                <div className="mt-8 flex flex-col items-center gap-2 text-center">
+                <div className="mt-5 flex flex-col items-center gap-2 text-center">
                   <button
                     onClick={goNext}
                     disabled={advancing}
                     className="next-btn"
+                    style={{ padding: "12px 30px", fontSize: "1.05rem" }}
                   >
                     {advancing
                       ? "טוען…"
@@ -1142,31 +1117,31 @@ function CountdownRing({
   total: number;
 }) {
   const pct = Math.max(0, Math.min(1, remaining / total));
-  const radius = 46;
+  const radius = 38;
   const circ = 2 * Math.PI * radius;
   const urgent = remaining <= 5;
   return (
     <div className={`timer-ring ${urgent ? "urgent" : ""}`}>
       <svg
-        viewBox="0 0 108 108"
+        viewBox="0 0 88 88"
         className="absolute inset-0 h-full w-full"
         style={{ transform: "rotate(-90deg)" }}
       >
         <circle
-          cx="54"
-          cy="54"
+          cx="44"
+          cy="44"
           r={radius}
           fill="none"
           stroke="rgba(23,61,110,0.12)"
-          strokeWidth="8"
+          strokeWidth="6"
         />
         <motion.circle
-          cx="54"
-          cy="54"
+          cx="44"
+          cy="44"
           r={radius}
           fill="none"
           stroke={urgent ? "var(--red)" : "var(--teal)"}
-          strokeWidth="8"
+          strokeWidth="6"
           strokeLinecap="round"
           strokeDasharray={circ}
           animate={{ strokeDashoffset: circ * (1 - pct) }}
