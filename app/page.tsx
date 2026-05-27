@@ -427,6 +427,47 @@ export default function EventHostPage() {
     if (typeof window !== "undefined") window.location.reload();
   }, []);
 
+  // ---- Keyboard / presentation-remote advance ----
+  // Space, Enter, ArrowRight, PageDown — all keys a typical presentation
+  // clicker emits — trigger the primary action of the current screen so the
+  // host can drive the event without showing a mouse. Question-active state
+  // is intentionally NOT bound, so an accidental press during answering
+  // doesn't truncate the timer.
+  useEffect(() => {
+    if (!session) return;
+    const handler = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement | null)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+
+      const advanceKeys = new Set([
+        " ",
+        "Spacebar",
+        "Enter",
+        "ArrowRight",
+        "PageDown",
+      ]);
+      if (!advanceKeys.has(e.key)) return;
+      if (e.repeat) return;
+      e.preventDefault();
+
+      if (session.state === "waiting") {
+        if (participants.length > 0) startFirst();
+      } else if (session.state === "showing_results") {
+        goNext();
+      } else if (session.state === "ended") {
+        startFresh();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [
+    session,
+    participants.length,
+    startFirst,
+    goNext,
+    startFresh,
+  ]);
+
   // ---------- RENDER ----------
 
   if (bootError) {
@@ -685,24 +726,29 @@ export default function EventHostPage() {
                 </div>
               </div>
 
-              <button
-                onClick={startFirst}
-                disabled={
-                  advancing || questions.length === 0 || participants.length === 0
-                }
-                className="cta-red rounded-full px-12 py-5 text-xl font-extrabold disabled:cursor-not-allowed disabled:opacity-40"
-                style={{ fontFamily: "var(--font-heebo)" }}
-              >
-                {advancing ? "מתחיל…" : "התחלת החידון"}
-              </button>
-              {participants.length === 0 && (
-                <p
-                  className="-mt-6 text-xs"
-                  style={{ color: "var(--foreground-faint)" }}
+              <div className="flex flex-col items-center gap-2">
+                <button
+                  onClick={startFirst}
+                  disabled={
+                    advancing ||
+                    questions.length === 0 ||
+                    participants.length === 0
+                  }
+                  className="cta-red rounded-full px-12 py-5 text-xl font-extrabold disabled:cursor-not-allowed disabled:opacity-40"
+                  style={{ fontFamily: "var(--font-heebo)" }}
                 >
-                  הכפתור יופעל אחרי שמשתתף ראשון מצטרף
-                </p>
-              )}
+                  {advancing ? "מתחיל…" : "התחלת החידון"}
+                </button>
+                {participants.length > 0 && <KbdHint />}
+                {participants.length === 0 && (
+                  <p
+                    className="text-xs"
+                    style={{ color: "var(--foreground-faint)" }}
+                  >
+                    הכפתור יופעל אחרי שמשתתף ראשון מצטרף
+                  </p>
+                )}
+              </div>
             </motion.section>
           )}
 
@@ -1009,18 +1055,21 @@ export default function EventHostPage() {
                     </button>
                   )}
                   {session.state === "showing_results" && (
-                    <button
-                      onClick={goNext}
-                      disabled={advancing}
-                      className="cta-red rounded-full px-10 py-4 text-lg font-extrabold disabled:opacity-50"
-                      style={{ fontFamily: "var(--font-heebo)" }}
-                    >
-                      {advancing
-                        ? "טוען…"
-                        : isLastQuestion
-                          ? "סיום החידון"
-                          : "השאלה הבאה ←"}
-                    </button>
+                    <div className="flex flex-col items-center gap-2">
+                      <button
+                        onClick={goNext}
+                        disabled={advancing}
+                        className="cta-red rounded-full px-10 py-4 text-lg font-extrabold disabled:opacity-50"
+                        style={{ fontFamily: "var(--font-heebo)" }}
+                      >
+                        {advancing
+                          ? "טוען…"
+                          : isLastQuestion
+                            ? "סיום החידון"
+                            : "השאלה הבאה ←"}
+                      </button>
+                      <KbdHint />
+                    </div>
                   )}
                 </div>
               </motion.section>
@@ -1148,18 +1197,58 @@ export default function EventHostPage() {
                 );
               })()}
 
-              <button
-                onClick={startFresh}
-                className="cta-red rounded-full px-10 py-4 text-lg font-extrabold"
-                style={{ fontFamily: "var(--font-heebo)" }}
-              >
-                סיבוב חדש
-              </button>
+              <div className="flex flex-col items-center gap-2">
+                <button
+                  onClick={startFresh}
+                  className="cta-red rounded-full px-10 py-4 text-lg font-extrabold"
+                  style={{ fontFamily: "var(--font-heebo)" }}
+                >
+                  סיבוב חדש
+                </button>
+                <KbdHint />
+              </div>
             </motion.section>
           )}
         </AnimatePresence>
       </div>
     </main>
+  );
+}
+
+function KbdHint() {
+  return (
+    <div
+      className="flex items-center gap-2 text-xs"
+      style={{
+        color: "var(--foreground-faint)",
+        fontFamily: "var(--font-heebo)",
+        letterSpacing: "0.05em",
+      }}
+    >
+      <span>גם עם</span>
+      <kbd
+        className="rounded-md border px-2 py-0.5 font-mono text-[0.7rem] font-bold"
+        style={{
+          borderColor: "rgba(23,61,110,0.18)",
+          color: "var(--navy)",
+          background: "rgba(255,255,255,0.7)",
+        }}
+      >
+        Space
+      </kbd>
+      <span>או</span>
+      <kbd
+        className="rounded-md border px-2 py-0.5 font-mono text-[0.7rem] font-bold"
+        style={{
+          borderColor: "rgba(23,61,110,0.18)",
+          color: "var(--navy)",
+          background: "rgba(255,255,255,0.7)",
+        }}
+      >
+        →
+      </kbd>
+      <span>· קליקר מצגות</span>
+    </div>
   );
 }
 
