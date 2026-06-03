@@ -11,7 +11,7 @@ export type ThemePreset = {
 export const THEME_PRESETS: ThemePreset[] = [
   {
     id: "andembry",
-    name: "Andembry — Beyond the Attack",
+    name: "Andembry",
     description: "טורקיז וכחול נייבי",
     settings: { primary: "#04b49d", secondary: "#173d6e" },
   },

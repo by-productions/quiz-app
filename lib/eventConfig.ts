@@ -1,5 +1,5 @@
 /**
- * Single-event constants for the "Beyond the Attack" launch quiz.
+ * Single-event constants for the Andembry launch quiz.
  * The quiz UUID matches the SQL seed in supabase/migrations/0007_seed_andembry_quiz.sql.
  */
 

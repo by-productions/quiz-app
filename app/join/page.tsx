@@ -156,10 +156,9 @@ function JoinForm() {
           <div className="eyebrow-mini">חידון HAE אינטראקטיבי</div>
           <h1
             className="hero-title mt-2"
-            dir="ltr"
-            style={{ fontSize: "clamp(2.2rem, 9vw, 3.4rem)" }}
+            style={{ fontSize: "clamp(1.9rem, 8vw, 3rem)" }}
           >
-            Beyond <span className="g">the</span> Attack
+            אירוע ההשקה של <span className="g">Andembry</span>
           </h1>
           <p className="mt-3 text-white/75">
             {hasPrefilledCode ? (

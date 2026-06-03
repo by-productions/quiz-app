@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* ============ Polin font (self-hosted — matches the event site) ============ */
+@font-face{font-family:'Polin';src:url('/fonts/Polin-Light.otf') format('opentype');font-weight:300;font-style:normal;font-display:swap}
+@font-face{font-family:'Polin';src:url('/fonts/Polin-Regular.otf') format('opentype');font-weight:400;font-style:normal;font-display:swap}
+@font-face{font-family:'Polin';src:url('/fonts/Polin-Medium.otf') format('opentype');font-weight:500;font-style:normal;font-display:swap}
+@font-face{font-family:'Polin';src:url('/fonts/Polin-Semibold.otf') format('opentype');font-weight:600;font-style:normal;font-display:swap}
+@font-face{font-family:'Polin';src:url('/fonts/Polin-Bold.otf') format('opentype');font-weight:700;font-style:normal;font-display:swap}
+@font-face{font-family:'Polin';src:url('/fonts/Polin-Extrabold.otf') format('opentype');font-weight:800;font-style:normal;font-display:swap}
+@font-face{font-family:'Polin';src:url('/fonts/Polin-Black.otf') format('opentype');font-weight:900;font-style:normal;font-display:swap}
+
 :root {
   /* ============ Andembry / Beyond-the-Answer palette ============ */
   --teal: #04b49d;
@@ -44,8 +53,8 @@
   --color-mint: var(--mint);
   --color-cream: var(--cream);
   --color-paper: var(--paper);
-  --font-sans: var(--font-assistant), var(--font-heebo), system-ui, sans-serif;
-  --font-display: var(--font-heebo), system-ui, sans-serif;
+  --font-sans: "Polin", var(--font-assistant), var(--font-heebo), system-ui, sans-serif;
+  --font-display: "Polin", var(--font-heebo), system-ui, sans-serif;
   --font-serif: var(--font-cormorant), "Cormorant Garamond", serif;
 }
 
@@ -61,7 +70,7 @@ body {
   background: var(--navy-deep);
   color: var(--foreground);
   font-family:
-    var(--font-assistant), var(--font-heebo), system-ui, -apple-system,
+    "Polin", var(--font-assistant), var(--font-heebo), system-ui, -apple-system,
     "Segoe UI", sans-serif;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
@@ -205,7 +214,7 @@ body {
 
 /* ============ Eyebrows + Section titles ============ */
 .eyebrow {
-  font-family: var(--font-heebo), sans-serif;
+  font-family: "Polin", var(--font-heebo), sans-serif;
   font-weight: 700;
   letter-spacing: 0.3em;
   font-size: 0.78rem;
@@ -223,7 +232,7 @@ body {
   border-radius: 3px;
 }
 .eyebrow-mini {
-  font-family: var(--font-heebo), sans-serif;
+  font-family: "Polin", var(--font-heebo), sans-serif;
   font-weight: 700;
   letter-spacing: 0.28em;
   font-size: 0.72rem;
@@ -231,7 +240,7 @@ body {
   color: var(--teal);
 }
 .section-title {
-  font-family: var(--font-heebo), sans-serif;
+  font-family: "Polin", var(--font-heebo), sans-serif;
   font-weight: 900;
   color: #fff;
   line-height: 1.1;
@@ -243,14 +252,14 @@ body {
   color: var(--navy);
 }
 
-/* ============ Hero title — italic Cormorant Garamond ============ */
+/* ============ Hero title — Polin (matches the event site) ============ */
 .hero-title {
-  font-family: var(--font-cormorant), "Cormorant Garamond", serif;
-  font-weight: 700;
-  font-style: italic;
-  line-height: 0.95;
+  font-family: "Polin", var(--font-heebo), sans-serif;
+  font-weight: 900;
+  font-style: normal;
+  line-height: 1.05;
   color: #fff;
-  letter-spacing: 0.5px;
+  letter-spacing: -0.005em;
 }
 .hero-title .amp,
 .hero-title .g {
@@ -260,9 +269,26 @@ body {
   color: var(--navy);
 }
 
+/* ============ Host credit line (presenter strip) ============ */
+.host-credit {
+  font-family: "Polin", var(--font-heebo), sans-serif;
+  font-weight: 700;
+  color: var(--gold);
+}
+.host-credit .role {
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+}
+.light-stage .host-credit {
+  color: var(--teal-deep);
+}
+.light-stage .host-credit .role {
+  color: rgba(15, 34, 56, 0.6);
+}
+
 /* ============ Role / view tag (gold pill in topbar) ============ */
 .viewtag {
-  font-family: var(--font-heebo), sans-serif;
+  font-family: "Polin", var(--font-heebo), sans-serif;
   font-weight: 800;
   letter-spacing: 0.12em;
   font-size: 0.78rem;
@@ -290,14 +316,14 @@ body {
 }
 .pin-box .lbl {
   color: rgba(255, 255, 255, 0.65);
-  font-family: var(--font-heebo), sans-serif;
+  font-family: "Polin", var(--font-heebo), sans-serif;
   font-weight: 700;
   letter-spacing: 0.18em;
   font-size: 0.75rem;
   text-transform: uppercase;
 }
 .pin-box .pin {
-  font-family: var(--font-heebo), sans-serif;
+  font-family: "Polin", var(--font-heebo), sans-serif;
   font-weight: 900;
   color: #fff;
   letter-spacing: 0.18em;
@@ -314,7 +340,7 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-heebo), sans-serif;
+  font-family: "Polin", var(--font-heebo), sans-serif;
   font-weight: 800;
   flex-shrink: 0;
 }
@@ -343,7 +369,7 @@ body {
   background: linear-gradient(135deg, var(--teal), var(--gold), var(--red));
 }
 .qr-card .qtitle {
-  font-family: var(--font-heebo), sans-serif;
+  font-family: "Polin", var(--font-heebo), sans-serif;
   font-weight: 800;
   color: var(--navy);
   font-size: 1.25rem;
@@ -368,7 +394,7 @@ body {
   border-radius: 22px;
   padding: clamp(20px, 3.5vw, 36px);
   text-align: center;
-  font-family: var(--font-heebo), sans-serif;
+  font-family: "Polin", var(--font-heebo), sans-serif;
   font-weight: 800;
   color: var(--navy);
   font-size: clamp(1.3rem, 3vw, 2.1rem);
@@ -385,7 +411,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-heebo), sans-serif;
+  font-family: "Polin", var(--font-heebo), sans-serif;
   font-weight: 900;
   font-size: 2.1rem;
   color: var(--navy);
@@ -405,7 +431,7 @@ body {
   padding: clamp(14px, 2vw, 22px);
   border-radius: 18px;
   color: #fff;
-  font-family: var(--font-heebo), sans-serif;
+  font-family: "Polin", var(--font-heebo), sans-serif;
   font-weight: 800;
   font-size: clamp(1.05rem, 2.2vw, 1.4rem);
   box-shadow: 0 20px 44px -22px rgba(0, 0, 0, 0.55);
@@ -492,7 +518,7 @@ body {
   justify-content: center;
   padding-top: 10px;
   color: #fff;
-  font-family: var(--font-heebo), sans-serif;
+  font-family: "Polin", var(--font-heebo), sans-serif;
   font-weight: 800;
   font-size: 1.25rem;
   font-variant-numeric: tabular-nums;
@@ -541,7 +567,7 @@ body {
   border-radius: 14px;
   font-size: 1.05rem;
   text-align: center;
-  font-family: var(--font-assistant), sans-serif;
+  font-family: "Polin", var(--font-assistant), sans-serif;
   outline: none;
   transition:
     border-color 0.3s,
@@ -563,7 +589,7 @@ body {
   border-radius: 14px;
   background: linear-gradient(135deg, var(--red), var(--red-deep));
   color: #fff;
-  font-family: var(--font-heebo), sans-serif;
+  font-family: "Polin", var(--font-heebo), sans-serif;
   font-weight: 800;
   font-size: 1.1rem;
   box-shadow: 0 16px 34px -14px rgba(238, 35, 41, 0.6);
@@ -592,7 +618,7 @@ body {
   gap: 10px;
   background: #fff;
   color: var(--navy);
-  font-family: var(--font-heebo), sans-serif;
+  font-family: "Polin", var(--font-heebo), sans-serif;
   font-weight: 800;
   font-size: 1.05rem;
   padding: 12px 30px;
@@ -677,7 +703,7 @@ body {
   background: rgba(255, 255, 255, 0.12);
   border: 1px solid rgba(255, 255, 255, 0.2);
   color: #fff;
-  font-family: var(--font-heebo), sans-serif;
+  font-family: "Polin", var(--font-heebo), sans-serif;
   font-weight: 700;
   font-size: 0.95rem;
   padding: 8px 16px;
@@ -715,7 +741,7 @@ body {
   border-radius: 50%;
   background: var(--grey);
   color: var(--navy);
-  font-family: var(--font-heebo), sans-serif;
+  font-family: "Polin", var(--font-heebo), sans-serif;
   font-weight: 900;
   display: flex;
   align-items: center;
@@ -736,14 +762,14 @@ body {
   color: #fff;
 }
 .lb-name {
-  font-family: var(--font-heebo), sans-serif;
+  font-family: "Polin", var(--font-heebo), sans-serif;
   font-weight: 800;
   color: var(--navy);
   font-size: 1.15rem;
 }
 .lb-score {
   margin-right: auto;
-  font-family: var(--font-heebo), sans-serif;
+  font-family: "Polin", var(--font-heebo), sans-serif;
   font-weight: 900;
   color: var(--teal-deep);
   font-size: 1.3rem;
@@ -758,7 +784,7 @@ body {
   gap: 10px;
 }
 .pod .pname {
-  font-family: var(--font-heebo), sans-serif;
+  font-family: "Polin", var(--font-heebo), sans-serif;
   font-weight: 800;
   color: #fff;
 }
@@ -769,7 +795,7 @@ body {
   align-items: flex-start;
   justify-content: center;
   padding-top: 14px;
-  font-family: var(--font-heebo), sans-serif;
+  font-family: "Polin", var(--font-heebo), sans-serif;
   font-weight: 900;
   font-size: 2rem;
   color: var(--navy);
@@ -794,7 +820,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-heebo), sans-serif;
+  font-family: "Polin", var(--font-heebo), sans-serif;
   font-weight: 900;
   color: #fff;
   font-size: 1.15rem;

@@ -541,14 +541,20 @@ export default function EventHostPage() {
                     </div>
                     <h1
                       className="hero-title mt-2"
-                      dir="ltr"
                       style={{
                         textAlign: "right",
-                        fontSize: "clamp(2.4rem, 5.5vw, 4.4rem)",
+                        fontSize: "clamp(1.9rem, 4.2vw, 3.4rem)",
                       }}
                     >
-                      Beyond <span className="g">the</span> Attack
+                      אירוע ההשקה של <span className="g">Andembry</span>
                     </h1>
+                    <div
+                      className="host-credit mt-2"
+                      style={{ fontSize: "clamp(0.95rem, 1.4vw, 1.15rem)" }}
+                    >
+                      בהנחיית נגה ניר-נאמן{" "}
+                      <span className="role">· חדשות 13</span>
+                    </div>
                     <p
                       className="mt-2 max-w-md"
                       style={{
@@ -946,10 +952,9 @@ export default function EventHostPage() {
                 </div>
                 <h1
                   className="hero-title"
-                  dir="ltr"
                   style={{ fontSize: "clamp(2.2rem, 6vw, 3.6rem)" }}
                 >
-                  Beyond the <span className="g">Attack</span>
+                  אירוע ההשקה של <span className="g">Andembry</span>
                 </h1>
                 <p className="mt-2 text-white/80">
                   כל הכבוד למשתתפים! הנה המובילים:

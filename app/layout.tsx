@@ -25,7 +25,7 @@ const cormorant = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "Beyond the Attack — B.Y. QUIZ",
+  title: "חידון HAE — אירוע ההשקה של Andembry",
   description:
     "אירוע ההשקה של Andembry — חידון אינטראקטיבי על HAE ו-garadacimab. מאת B.Y Productions עבור CSL ישראל.",
 };

@@ -1,5 +1,5 @@
 -- ============================================================
--- Seed: "Beyond the Attack" Andembry launch quiz
+-- Seed: Andembry launch quiz
 -- 5 hand-picked HAE / garadacimab questions, MC, 30s timer.
 -- Fixed quiz UUID so the app can reference it directly.
 -- Idempotent: re-running clears + re-seeds the same quiz UUID.
@@ -16,7 +16,7 @@ begin
   insert into public.quizzes (id, title, design_settings)
   values (
     v_quiz_id,
-    'Beyond the Attack — HAE & garadacimab',
+    'חידון HAE — אירוע ההשקה של Andembry',
     jsonb_build_object(
       'primary', '#04b49d',
       'secondary', '#173d6e',
