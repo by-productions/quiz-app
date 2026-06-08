@@ -931,3 +931,31 @@ body {
   height: clamp(48px, 3.6vw, 66px);
   font-size: clamp(1.15rem, 1.8vw, 1.7rem);
 }
+
+/* Host controls dock — hidden in the bottom-right corner, revealed on hover.
+   Keeps the projected screen clean for the audience; the host hovers to act. */
+.host-dock {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 12px;
+  /* Generous padding enlarges the invisible hover target in the corner. */
+  padding: 48px 44px 20px 48px;
+  opacity: 0;
+  transform: translateY(10px);
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
+}
+.host-dock:hover,
+.host-dock:focus-within {
+  opacity: 1;
+  transform: translateY(0);
+}
+.host-dock .next-btn {
+  box-shadow: 0 14px 34px -14px rgba(0, 0, 0, 0.55);
+}

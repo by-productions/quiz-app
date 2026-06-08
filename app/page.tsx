@@ -716,7 +716,6 @@ export default function EventHostPage() {
                         <path d="M8 5v14l11-7z" />
                       </svg>
                     </button>
-                    {participants.length > 0 && <KbdHint />}
                   </div>
                   {participants.length === 0 && (
                     <p className="text-xs text-white/45">
@@ -935,7 +934,6 @@ export default function EventHostPage() {
                       <path d="M8 5v14l11-7z" />
                     </svg>
                   </button>
-                  <KbdHint />
                 </div>
               </motion.section>
             )}
@@ -1015,19 +1013,26 @@ export default function EventHostPage() {
                     </>
                   );
                 })()}
-
-                <div className="mt-10 flex flex-col items-center gap-2">
-                  <button onClick={startFresh} className="next-btn">
-                    <svg viewBox="0 0 24 24">
-                      <path d="M12 5V1L7 6l5 5V7a6 6 0 11-6 6H4a8 8 0 108-8z" />
-                    </svg>
-                    אתגר חדש
-                  </button>
-                  <KbdHint />
-                </div>
               </motion.section>
             )}
           </AnimatePresence>
+        </div>
+
+        {/* Host controls — tucked into the bottom-right corner, revealed on hover */}
+        <div className="host-dock" aria-label="פקדי מנחה">
+          {session.state === "ended" && (
+            <button
+              onClick={startFresh}
+              className="next-btn"
+              style={{ fontSize: "1rem", padding: "10px 22px" }}
+            >
+              <svg viewBox="0 0 24 24">
+                <path d="M12 5V1L7 6l5 5V7a6 6 0 11-6 6H4a8 8 0 108-8z" />
+              </svg>
+              אתגר חדש
+            </button>
+          )}
+          <KbdHint />
         </div>
       </main>
     </>
