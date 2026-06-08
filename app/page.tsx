@@ -494,27 +494,27 @@ export default function EventHostPage() {
   return (
     <>
       <EventBackground />
-      <main className="relative z-10 flex h-screen flex-col overflow-hidden">
-        {/* TOPBAR — public-facing, so no role label */}
-        <header className="flex items-center justify-between px-6 py-4 sm:px-10">
-          <div className="flex items-center gap-5 sm:gap-6">
-            <Image
-              src="/csl-logo.png"
-              alt="CSL"
-              width={180}
-              height={42}
-              priority
-              className="h-9 w-auto rounded-lg bg-white px-2.5 py-1 sm:h-10"
-            />
-            <Image
-              src="/andembry-logo.png"
-              alt="Andembry"
-              width={200}
-              height={40}
-              priority
-              className="h-8 w-auto opacity-95 brightness-0 invert sm:h-9"
-            />
-          </div>
+      <main className="host-stage relative z-10 flex h-screen flex-col overflow-hidden">
+        {/* TOPBAR — one logo per corner, larger, full color */}
+        <header className="flex items-center justify-between px-8 py-4 sm:px-14">
+          {/* RIGHT corner (RTL) — Andembry, full color on a white chip */}
+          <Image
+            src="/andembry-logo.png"
+            alt="Andembry"
+            width={300}
+            height={64}
+            priority
+            className="h-14 w-auto rounded-2xl bg-white px-5 py-2.5 sm:h-[4.5rem]"
+          />
+          {/* LEFT corner — CSL */}
+          <Image
+            src="/csl-logo.png"
+            alt="CSL"
+            width={220}
+            height={52}
+            priority
+            className="h-12 w-auto rounded-2xl bg-white px-5 py-2.5 sm:h-16"
+          />
         </header>
 
         {/* STAGE */}
@@ -528,14 +528,17 @@ export default function EventHostPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -18 }}
                 transition={{ duration: 0.45 }}
-                className="w-full max-w-6xl"
+                className="w-full max-w-[1500px]"
               >
-                <div className="grid items-center gap-8 md:grid-cols-[1.1fr_.9fr] md:gap-10">
+                <div className="grid items-center gap-6 md:grid-cols-[1.1fr_.9fr] md:gap-8">
                   {/* LEFT — title + steps + pin */}
                   <div className="text-right">
                     <div
                       className="eyebrow-mini"
-                      style={{ fontSize: "0.78rem", letterSpacing: "0.28em" }}
+                      style={{
+                        fontSize: "clamp(1.05rem, 1.9vw, 1.5rem)",
+                        letterSpacing: "0.2em",
+                      }}
                     >
                       חידון HAE אינטראקטיבי
                     </div>
@@ -543,23 +546,23 @@ export default function EventHostPage() {
                       className="hero-title mt-2"
                       style={{
                         textAlign: "right",
-                        fontSize: "clamp(1.9rem, 4.2vw, 3.4rem)",
+                        fontSize: "clamp(2.2rem, 4.8vw, 4.2rem)",
                       }}
                     >
                       אירוע ההשקה של <span className="g">Andembry</span>
                     </h1>
                     <div
                       className="host-credit mt-2"
-                      style={{ fontSize: "clamp(0.95rem, 1.4vw, 1.15rem)" }}
+                      style={{ fontSize: "clamp(1.05rem, 1.7vw, 1.5rem)" }}
                     >
                       בהנחיית נגה ניר-נאמן{" "}
                       <span className="role">· חדשות 13</span>
                     </div>
                     <p
-                      className="mt-2 max-w-md"
+                      className="mt-2 max-w-xl"
                       style={{
                         color: "rgba(255,255,255,0.85)",
-                        fontSize: "clamp(0.95rem, 1.4vw, 1.1rem)",
+                        fontSize: "clamp(1.05rem, 1.5vw, 1.3rem)",
                         lineHeight: 1.45,
                       }}
                     >
@@ -567,35 +570,35 @@ export default function EventHostPage() {
                       על HAE ועל <span dir="ltr">Andembry</span>.
                     </p>
 
-                    <div className="mt-5 flex flex-col gap-2.5">
+                    <div className="mt-4 flex flex-col gap-2">
                       <div
                         className="flex items-center gap-3 font-semibold text-white/90"
-                        style={{ fontSize: "clamp(0.95rem, 1.3vw, 1.05rem)" }}
+                        style={{ fontSize: "clamp(1rem, 1.5vw, 1.45rem)" }}
                       >
                         <span className="step-num">1</span>
                         פותחים את מצלמת הנייד
                       </div>
                       <div
                         className="flex items-center gap-3 font-semibold text-white/90"
-                        style={{ fontSize: "clamp(0.95rem, 1.3vw, 1.05rem)" }}
+                        style={{ fontSize: "clamp(1rem, 1.5vw, 1.45rem)" }}
                       >
                         <span className="step-num s2">2</span>
                         סורקים את קוד ה-QR
                       </div>
                       <div
                         className="flex items-center gap-3 font-semibold text-white/90"
-                        style={{ fontSize: "clamp(0.95rem, 1.3vw, 1.05rem)" }}
+                        style={{ fontSize: "clamp(1rem, 1.5vw, 1.45rem)" }}
                       >
                         <span className="step-num s3">3</span>
                         מזינים שם ומצטרפים
                       </div>
                     </div>
 
-                    <div className="pin-box mt-5" style={{ padding: "16px 22px" }}>
+                    <div className="pin-box mt-3" style={{ padding: "14px 22px" }}>
                       <span className="lbl">או הצטרפות עם קוד</span>
                       <span
                         className="pin"
-                        style={{ fontSize: "clamp(2.2rem, 5vw, 3.3rem)" }}
+                        style={{ fontSize: "clamp(2.4rem, 5.4vw, 4rem)" }}
                       >
                         {formattedCode}
                       </span>
@@ -625,12 +628,12 @@ export default function EventHostPage() {
                       </div>
                       <div
                         className="qr-wrap"
-                        style={{ width: "min(280px, 60vw)", padding: 10 }}
+                        style={{ width: "min(340px, 62vw)", padding: 12 }}
                       >
                         {joinUrl ? (
                           <QRCodeSVG
                             value={joinUrl}
-                            size={260}
+                            size={320}
                             level="M"
                             marginSize={0}
                             bgColor="#ffffff"
@@ -645,12 +648,12 @@ export default function EventHostPage() {
                 </div>
 
                 {/* PARTICIPANTS + START — compact */}
-                <div className="mt-5 flex flex-col items-center gap-3 text-center">
+                <div className="mt-3 flex flex-col items-center gap-2 text-center">
                   <p
                     className="font-extrabold"
                     style={{
                       color: "var(--gold)",
-                      fontSize: "1.05rem",
+                      fontSize: "clamp(1.1rem, 1.7vw, 1.6rem)",
                     }}
                   >
                     <span style={{ fontSize: "1.5em" }}>
@@ -703,7 +706,10 @@ export default function EventHostPage() {
                         participants.length === 0
                       }
                       className="next-btn disabled:opacity-40"
-                      style={{ padding: "12px 30px", fontSize: "1.05rem" }}
+                      style={{
+                        padding: "clamp(12px,1.3vw,18px) clamp(30px,3vw,46px)",
+                        fontSize: "clamp(1.05rem,1.6vw,1.5rem)",
+                      }}
                     >
                       להתחלת החידון
                       <svg viewBox="0 0 24 24">
@@ -729,14 +735,14 @@ export default function EventHostPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -18 }}
                 transition={{ duration: 0.4 }}
-                className="w-full max-w-6xl"
+                className="w-full max-w-[1500px]"
               >
                 <div className="mb-4 flex items-center justify-between text-white">
                   <span
                     className="font-bold opacity-85"
                     style={{
                       fontFamily: "var(--font-heebo)",
-                      fontSize: "clamp(1rem, 1.8vw, 1.25rem)",
+                      fontSize: "clamp(1.1rem, 2vw, 1.7rem)",
                     }}
                   >
                     שאלה {currentIndex + 1} מתוך {questions.length}
@@ -800,7 +806,7 @@ export default function EventHostPage() {
                   >
                     <span
                       className="font-bold"
-                      style={{ fontSize: "clamp(0.95rem, 1.5vw, 1.15rem)" }}
+                      style={{ fontSize: "clamp(1.05rem, 1.7vw, 1.5rem)" }}
                     >
                       ענו עד כה:{" "}
                       <span className="text-white">{totalVotes}</span> /{" "}
@@ -809,11 +815,11 @@ export default function EventHostPage() {
                     <button
                       onClick={endQuestionNow}
                       disabled={advancing}
-                      className="rounded-full border px-5 py-2 font-bold transition-all hover:-translate-y-0.5 disabled:opacity-50"
+                      className="rounded-full border px-6 py-2.5 font-bold transition-all hover:-translate-y-0.5 disabled:opacity-50"
                       style={{
                         borderColor: "rgba(255,255,255,0.25)",
                         color: "#fff",
-                        fontSize: "0.95rem",
+                        fontSize: "clamp(0.95rem, 1.4vw, 1.3rem)",
                       }}
                     >
                       סיים שאלה עכשיו
@@ -831,14 +837,14 @@ export default function EventHostPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -18 }}
                 transition={{ duration: 0.45 }}
-                className="w-full max-w-6xl"
+                className="w-full max-w-[1500px]"
               >
                 <div className="mb-4 flex items-center justify-between text-white">
                   <span
                     className="font-bold opacity-85"
                     style={{
                       fontFamily: "var(--font-heebo)",
-                      fontSize: "clamp(1rem, 1.8vw, 1.25rem)",
+                      fontSize: "clamp(1.1rem, 2vw, 1.7rem)",
                     }}
                   >
                     תוצאות שאלה {currentIndex + 1}
@@ -847,7 +853,7 @@ export default function EventHostPage() {
 
                 <div
                   className="q-text"
-                  style={{ fontSize: "clamp(1.2rem, 2.5vw, 1.75rem)" }}
+                  style={{ fontSize: "clamp(1.5rem, 2.9vw, 2.5rem)" }}
                 >
                   {currentQuestion.question_text}
                 </div>
@@ -856,7 +862,7 @@ export default function EventHostPage() {
                   className="mt-5 grid items-end gap-3 sm:gap-5"
                   style={{
                     gridTemplateColumns: `repeat(${currentQuestion.answer_options.length}, 1fr)`,
-                    height: "min(40vh, 290px)",
+                    height: "min(46vh, 380px)",
                   }}
                 >
                   {currentQuestion.answer_options.map((opt, idx) => {
@@ -905,7 +911,7 @@ export default function EventHostPage() {
                           ? "var(--gold)"
                           : "rgba(255,255,255,0.65)",
                         fontFamily: "var(--font-heebo)",
-                        fontSize: "clamp(0.95rem, 1.5vw, 1.2rem)",
+                        fontSize: "clamp(1.05rem, 1.7vw, 1.65rem)",
                       }}
                     >
                       {opt.text}
@@ -942,7 +948,7 @@ export default function EventHostPage() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -18 }}
                 transition={{ duration: 0.45 }}
-                className="w-full max-w-3xl text-center"
+                className="w-full max-w-5xl text-center"
               >
                 <div
                   className="mb-3 text-6xl"
@@ -952,12 +958,15 @@ export default function EventHostPage() {
                 </div>
                 <h1
                   className="hero-title"
-                  style={{ fontSize: "clamp(2.2rem, 6vw, 3.6rem)" }}
+                  style={{ fontSize: "clamp(2.6rem, 6vw, 4.6rem)" }}
                 >
                   אירוע ההשקה של <span className="g">Andembry</span>
                 </h1>
-                <p className="mt-2 text-white/80">
-                  כל הכבוד למשתתפים! הנה המובילים:
+                <p
+                  className="mt-3 font-bold text-white/90"
+                  style={{ fontSize: "clamp(1.3rem, 2.6vw, 2rem)" }}
+                >
+                  כל הכבוד למשתתפים. והמנצחים הם:
                 </p>
 
                 {(() => {
@@ -965,7 +974,6 @@ export default function EventHostPage() {
                     (a, b) => (b.score ?? 0) - (a.score ?? 0),
                   );
                   const podium = ranked.slice(0, 3);
-                  const rest = ranked.slice(3);
                   // Display silver-gold-bronze in visual order: 2nd, 1st, 3rd
                   const visualOrder = [1, 0, 2]
                     .map((rank) =>
@@ -1004,28 +1012,6 @@ export default function EventHostPage() {
                           );
                         })}
                       </div>
-
-                      {rest.length > 0 && (
-                        <div className="mx-auto mt-8 flex max-w-xl flex-col gap-2 text-right">
-                          {rest.map((p, i) => (
-                            <motion.div
-                              key={p.id}
-                              initial={{ opacity: 0, x: 12 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{
-                                delay: 0.7 + i * 0.05,
-                              }}
-                              className="lb-row"
-                            >
-                              <span className="lb-rank">{i + 4}</span>
-                              <span className="lb-name">{p.nickname}</span>
-                              <span className="lb-score">
-                                {p.score ?? 0}
-                              </span>
-                            </motion.div>
-                          ))}
-                        </div>
-                      )}
                     </>
                   );
                 })()}

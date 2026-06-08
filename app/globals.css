@@ -854,3 +854,80 @@ body {
 .input-surface::placeholder {
   color: rgba(255, 255, 255, 0.4);
 }
+
+/* ============ Host projector stage — scale content up for the big screen ============ */
+/* Only raises the UPPER clamp bounds, so phones (small viewports) are unaffected. */
+.host-stage .q-text {
+  font-size: clamp(1.6rem, 3.4vw, 3.1rem);
+  padding: clamp(24px, 3.4vw, 46px);
+  border-radius: 26px;
+}
+.host-stage .ans-card {
+  font-size: clamp(1.2rem, 2.5vw, 2.1rem);
+  padding: clamp(18px, 2.2vw, 30px);
+  border-radius: 22px;
+  gap: clamp(16px, 1.6vw, 24px);
+}
+.host-stage .ans-card .shape {
+  width: clamp(40px, 3.2vw, 58px);
+  height: clamp(40px, 3.2vw, 58px);
+}
+.host-stage .ans-card .cnt {
+  font-size: clamp(1.1rem, 1.8vw, 1.6rem);
+  padding: 6px 18px;
+  min-width: 56px;
+}
+.host-stage .barcol .bar {
+  font-size: clamp(1.3rem, 2.2vw, 2rem);
+  border-radius: 14px 14px 0 0;
+}
+.host-stage .barcol .sh-box {
+  width: clamp(40px, 3vw, 52px);
+  height: clamp(40px, 3vw, 52px);
+}
+.host-stage .timer-ring {
+  width: clamp(88px, 8vw, 122px);
+  height: clamp(88px, 8vw, 122px);
+  font-size: clamp(2.1rem, 3.2vw, 3rem);
+}
+.host-stage .next-btn {
+  font-size: clamp(1.05rem, 1.6vw, 1.45rem);
+  padding: clamp(12px, 1.3vw, 18px) clamp(30px, 3vw, 44px);
+}
+.host-stage .step-num {
+  width: clamp(30px, 2.6vw, 42px);
+  height: clamp(30px, 2.6vw, 42px);
+  font-size: clamp(0.95rem, 1.3vw, 1.3rem);
+}
+.host-stage .player-chip {
+  font-size: clamp(0.95rem, 1.3vw, 1.2rem);
+  padding: clamp(8px, 0.9vw, 12px) clamp(16px, 1.4vw, 22px);
+}
+.host-stage .qr-card .qtitle {
+  font-size: clamp(1.25rem, 1.8vw, 1.7rem);
+}
+.host-stage .pin-box .lbl {
+  font-size: clamp(0.75rem, 1vw, 1rem);
+}
+/* Podium — bigger finale */
+.host-stage .pod .block {
+  width: clamp(110px, 15vw, 185px);
+  font-size: clamp(2rem, 3vw, 3.1rem);
+}
+.host-stage .pod.p1 .block {
+  height: clamp(180px, 26vh, 265px);
+}
+.host-stage .pod.p2 .block {
+  height: clamp(140px, 20vh, 205px);
+}
+.host-stage .pod.p3 .block {
+  height: clamp(105px, 15vh, 155px);
+}
+.host-stage .pod .pname {
+  font-size: clamp(1.05rem, 1.7vw, 1.7rem);
+}
+.host-stage .pod .medal {
+  width: clamp(48px, 3.6vw, 66px);
+  height: clamp(48px, 3.6vw, 66px);
+  font-size: clamp(1.15rem, 1.8vw, 1.7rem);
+}

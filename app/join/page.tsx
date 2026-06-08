@@ -128,21 +128,23 @@ function JoinForm() {
   return (
     <main className="relative z-10 flex min-h-screen flex-col">
       <header className="flex items-center justify-between px-5 py-4 sm:px-8">
-        <Image
-          src="/csl-logo.png"
-          alt="CSL"
-          width={120}
-          height={26}
-          priority
-          className="h-6 w-auto rounded-md bg-white px-2 py-1"
-        />
+        {/* RIGHT corner (RTL) — Andembry, full color on a white chip */}
         <Image
           src="/andembry-logo.png"
           alt="Andembry"
-          width={120}
-          height={22}
+          width={160}
+          height={34}
           priority
-          className="h-5 w-auto opacity-95 brightness-0 invert"
+          className="h-9 w-auto rounded-xl bg-white px-2.5 py-1.5"
+        />
+        {/* LEFT corner — CSL */}
+        <Image
+          src="/csl-logo.png"
+          alt="CSL"
+          width={130}
+          height={30}
+          priority
+          className="h-8 w-auto rounded-xl bg-white px-2.5 py-1.5"
         />
       </header>
 
@@ -153,7 +155,12 @@ function JoinForm() {
           transition={{ duration: 0.5 }}
           className="text-center"
         >
-          <div className="eyebrow-mini">חידון HAE אינטראקטיבי</div>
+          <div
+            className="eyebrow-mini"
+            style={{ fontSize: "clamp(1rem, 4.5vw, 1.3rem)", letterSpacing: "0.18em" }}
+          >
+            חידון HAE אינטראקטיבי
+          </div>
           <h1
             className="hero-title mt-2"
             style={{ fontSize: "clamp(1.9rem, 8vw, 3rem)" }}
@@ -163,7 +170,7 @@ function JoinForm() {
           <p className="mt-3 text-white/75">
             {hasPrefilledCode ? (
               <>
-                ✓ קוד נטען אוטומטית — רק תני שם
+                ✓ קוד נטען אוטומטית — הוסף/י כינוי
               </>
             ) : (
               <>הזינו את קוד המשחק כדי להצטרף</>
@@ -216,7 +223,7 @@ function JoinForm() {
             disabled={joining}
             className="pbtn mt-2"
           >
-            {joining ? "מצטרפת…" : "הצטרפות לחידון"}
+            {joining ? "מצטרף/ת…" : "הצטרפות לחידון"}
           </button>
         </motion.form>
 

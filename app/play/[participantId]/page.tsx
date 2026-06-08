@@ -269,15 +269,25 @@ export default function PlayerPage() {
       <main className="relative z-10 flex min-h-screen flex-col">
         {/* TOPBAR */}
         <header className="flex items-center justify-between px-5 py-4 sm:px-8">
+          {/* RIGHT corner (RTL) — Andembry, full color on a white chip */}
           <Image
-            src="/csl-logo.png"
-            alt="CSL"
-            width={120}
-            height={26}
+            src="/andembry-logo.png"
+            alt="Andembry"
+            width={160}
+            height={34}
             priority
-            className="h-6 w-auto rounded-md bg-white px-2 py-1"
+            className="h-9 w-auto rounded-xl bg-white px-2.5 py-1.5"
           />
-          <div className="flex items-center gap-2">
+          {/* LEFT corner — CSL + participant name */}
+          <div className="flex items-center gap-2.5">
+            <Image
+              src="/csl-logo.png"
+              alt="CSL"
+              width={120}
+              height={28}
+              priority
+              className="h-8 w-auto rounded-xl bg-white px-2.5 py-1.5"
+            />
             <span className="viewtag teal">{me.nickname}</span>
           </div>
         </header>
@@ -443,8 +453,8 @@ export default function PlayerPage() {
                   myAnswer={myAnswer}
                   options={currentQuestion.answer_options}
                 />
-                <p className="max-w-sm text-sm text-white/65">
-                  הסתכלו על המסך הגדול לתוצאות ולשיחה ↑
+                <p className="max-w-sm text-base font-semibold text-white/75">
+                  הסתכלו על המסך הגדול לתוצאות ולתשובת המומחה
                 </p>
               </motion.section>
             )}
@@ -557,20 +567,6 @@ function AnswerOutcome({
             ? "תשובה נכונה! 🎯"
             : "לא נכון הפעם"}
       </h3>
-      {correct && (
-        <div
-          className="rounded-2xl px-4 py-3 text-sm font-bold"
-          style={{
-            background: "rgba(255,255,255,0.1)",
-            color: "#fff",
-            border: "1px solid rgba(255,255,255,0.18)",
-            maxWidth: "320px",
-          }}
-        >
-          <span style={{ color: "var(--gold)" }}>תשובה נכונה:</span>{" "}
-          {correct.text}
-        </div>
-      )}
     </motion.div>
   );
 }
