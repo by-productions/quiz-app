@@ -281,7 +281,34 @@ export default function EventHostPage() {
     return () => {
       cancelled = true;
     };
-  }, [session?.current_question_id, session?.id, supabase]);
+    // Re-pull on state change too, so the results bars (and the scores derived
+    // from them) reflect the authoritative DB count when results are shown,
+    // not just whatever realtime INSERT events happened to arrive.
+  }, [session?.current_question_id, session?.state, session?.id, supabase]);
+
+  // Safety net: if the host tab is backgrounded/loses its socket, re-pull the
+  // participant list when it regains focus so the live count can't drift.
+  useEffect(() => {
+    if (!session) return;
+    const sid = session.id;
+    const onWake = async () => {
+      if (document.visibilityState !== "visible") return;
+      const { data } = await supabase
+        .from("participants")
+        .select("*")
+        .eq("session_id", sid)
+        .order("joined_at");
+      if (data) setParticipants(data as Participant[]);
+    };
+    window.addEventListener("focus", onWake);
+    document.addEventListener("visibilitychange", onWake);
+    window.addEventListener("online", onWake);
+    return () => {
+      window.removeEventListener("focus", onWake);
+      document.removeEventListener("visibilitychange", onWake);
+      window.removeEventListener("online", onWake);
+    };
+  }, [session?.id, supabase]);
 
   const currentQuestion = questions.find(
     (q) => q.id === session?.current_question_id,
@@ -360,22 +387,45 @@ export default function EventHostPage() {
 
     const correct = currentQuestion.answer_options.find((o) => o.is_correct);
     if (correct) {
-      const correctIds = responses
-        .filter(
-          (r) =>
-            r.question_id === currentQuestion.id && r.option_id === correct.id,
-        )
-        .map((r) => r.participant_id);
-      await Promise.all(
-        correctIds.map((pid) => {
-          const p = participants.find((pp) => pp.id === pid);
-          if (!p) return null;
-          return supabase
-            .from("participants")
-            .update({ score: (p.score ?? 0) + 100 })
-            .eq("id", pid);
-        }),
+      // Authoritative scoring: re-read this question's responses straight from
+      // the DB so scores are correct even if some realtime INSERT events were
+      // dropped under load. Base each +100 on the DB score, not local state.
+      const { data: rows } = await supabase
+        .from("responses")
+        .select("participant_id, answer_data")
+        .eq("session_id", session.id)
+        .eq("question_id", currentQuestion.id);
+      const correctIds = Array.from(
+        new Set(
+          (
+            (rows ?? []) as Array<{
+              participant_id: string;
+              answer_data: { option_id?: string };
+            }>
+          )
+            .filter((r) => r.answer_data?.option_id === correct.id)
+            .map((r) => r.participant_id),
+        ),
       );
+      if (correctIds.length > 0) {
+        const { data: scoreRows } = await supabase
+          .from("participants")
+          .select("id, score")
+          .in("id", correctIds);
+        const scoreMap = new Map<string, number>(
+          (
+            (scoreRows ?? []) as Array<{ id: string; score: number | null }>
+          ).map((p) => [p.id, p.score ?? 0]),
+        );
+        await Promise.all(
+          correctIds.map((pid) =>
+            supabase
+              .from("participants")
+              .update({ score: (scoreMap.get(pid) ?? 0) + 100 })
+              .eq("id", pid),
+          ),
+        );
+      }
     }
 
     const idx = questions.findIndex((q) => q.id === currentQuestion.id);
@@ -396,15 +446,7 @@ export default function EventHostPage() {
         .eq("id", session.id);
     }
     setAdvancing(false);
-  }, [
-    advancing,
-    currentQuestion,
-    participants,
-    questions,
-    responses,
-    session,
-    supabase,
-  ]);
+  }, [advancing, currentQuestion, questions, session, supabase]);
 
   const startFresh = useCallback(async () => {
     if (typeof window !== "undefined")
@@ -661,41 +703,6 @@ export default function EventHostPage() {
                     </span>{" "}
                     משתתפים מחוברים
                   </p>
-
-                  {participants.length > 0 && (
-                    <div className="mx-auto flex max-w-4xl flex-wrap justify-center gap-2">
-                      <AnimatePresence initial={false}>
-                        {participants.map((p) => (
-                          <motion.div
-                            key={p.id}
-                            layout
-                            initial={{ opacity: 0, scale: 0.6 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.6 }}
-                            transition={{
-                              type: "spring",
-                              stiffness: 300,
-                              damping: 22,
-                            }}
-                            className="player-chip"
-                            style={{ fontSize: "0.95rem", padding: "8px 16px" }}
-                          >
-                            <span
-                              className="av"
-                              style={{
-                                width: 24,
-                                height: 24,
-                                fontSize: "0.78rem",
-                              }}
-                            >
-                              {p.nickname.slice(0, 1).toUpperCase()}
-                            </span>
-                            {p.nickname}
-                          </motion.div>
-                        ))}
-                      </AnimatePresence>
-                    </div>
-                  )}
 
                   <div className="flex items-center gap-4">
                     <button

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -69,6 +69,46 @@ function JoinForm() {
   const [nickname, setNickname] = useState("");
   const [joining, setJoining] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resuming, setResuming] = useState(true);
+
+  // Resume: if this device already joined an active game (e.g. the tab was
+  // killed and they re-scanned the QR), send them back to their existing
+  // participant — keeping their score — instead of creating a duplicate.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const stored =
+        typeof window !== "undefined"
+          ? localStorage.getItem("andembry-participant-id")
+          : null;
+      if (!stored) {
+        if (!cancelled) setResuming(false);
+        return;
+      }
+      const { data: p } = await supabase
+        .from("participants")
+        .select("id, session_id")
+        .eq("id", stored)
+        .maybeSingle();
+      if (p) {
+        const { data: s } = await supabase
+          .from("game_sessions")
+          .select("state")
+          .eq("id", (p as { session_id: string }).session_id)
+          .maybeSingle();
+        if (s && (s as { state: string }).state !== "ended") {
+          if (!cancelled) router.replace(`/play/${stored}`);
+          return;
+        }
+      }
+      // Stale (participant gone or game ended) — forget it and join fresh.
+      localStorage.removeItem("andembry-participant-id");
+      if (!cancelled) setResuming(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [supabase, router]);
 
   async function join(e: React.FormEvent) {
     e.preventDefault();
@@ -120,10 +160,21 @@ function JoinForm() {
       return;
     }
 
-    router.push(`/play/${(participant as { id: string }).id}`);
+    const newId = (participant as { id: string }).id;
+    if (typeof window !== "undefined")
+      localStorage.setItem("andembry-participant-id", newId);
+    router.push(`/play/${newId}`);
   }
 
   const hasPrefilledCode = initialCode.length === 6;
+
+  if (resuming) {
+    return (
+      <main className="relative z-10 flex min-h-screen items-center justify-center p-8 text-white/55">
+        טוען…
+      </main>
+    );
+  }
 
   return (
     <main className="relative z-10 flex min-h-screen flex-col">

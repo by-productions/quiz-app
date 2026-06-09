@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -145,11 +145,65 @@ export default function PlayerPage() {
           map.set(r.question_id, r.answer_data.option_id);
       }
       setMyAnswers(map);
+
+      // Remember who we are so a killed/closed tab can resume with the
+      // same identity (and score) instead of creating a new participant.
+      if (typeof window !== "undefined")
+        localStorage.setItem("andembry-participant-id", participant.id);
     })();
     return () => {
       cancelled = true;
     };
   }, [participantId, supabase]);
+
+  // Catch-up sync: re-read the authoritative state from the DB. Realtime
+  // events that arrive while the phone is asleep / backgrounded are lost,
+  // so we re-pull whenever the tab becomes visible, regains focus, comes
+  // back online, or the realtime socket (re)subscribes.
+  const refresh = useCallback(async () => {
+    if (!participantId) return;
+    const { data: p } = await supabase
+      .from("participants")
+      .select("*")
+      .eq("id", participantId)
+      .maybeSingle();
+    if (!p) return;
+    const participant = p as Participant;
+    setMe(participant);
+    const { data: s } = await supabase
+      .from("game_sessions")
+      .select("*")
+      .eq("id", participant.session_id)
+      .maybeSingle();
+    if (s) setSession(s as GameSession);
+    const { data: rs } = await supabase
+      .from("responses")
+      .select("question_id, answer_data")
+      .eq("participant_id", participantId);
+    const map = new Map<string, string>();
+    for (const r of (rs ?? []) as Array<{
+      question_id: string;
+      answer_data: { option_id?: string };
+    }>) {
+      if (r.answer_data?.option_id)
+        map.set(r.question_id, r.answer_data.option_id);
+    }
+    setMyAnswers(map);
+  }, [participantId, supabase]);
+
+  useEffect(() => {
+    const onWake = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    document.addEventListener("visibilitychange", onWake);
+    window.addEventListener("focus", onWake);
+    window.addEventListener("online", onWake);
+    return () => {
+      document.removeEventListener("visibilitychange", onWake);
+      window.removeEventListener("focus", onWake);
+      window.removeEventListener("online", onWake);
+    };
+  }, [refresh]);
 
   // Realtime
   useEffect(() => {
@@ -176,11 +230,15 @@ export default function PlayerPage() {
         },
         (payload: { new: Participant }) => setMe(payload.new),
       )
-      .subscribe();
+      .subscribe((status: string) => {
+        // On first subscribe and on every reconnect, pull the current
+        // state so we never stay stuck on a screen we missed an update for.
+        if (status === "SUBSCRIBED") refresh();
+      });
     return () => {
       channel.unsubscribe();
     };
-  }, [session?.id, me?.id, supabase]);
+  }, [session?.id, me?.id, supabase, refresh]);
 
   const currentQuestion = questions.find(
     (q) => q.id === session?.current_question_id,
