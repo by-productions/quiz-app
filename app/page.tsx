@@ -41,15 +41,21 @@ function OptionShape({ index }: { index: number }) {
         <circle cx="16" cy="16" r="14" />
       </svg>
     );
+  if (index === 3)
+    return (
+      <svg viewBox="0 0 32 32">
+        <rect x="3" y="3" width="26" height="26" rx="3" />
+      </svg>
+    );
   return (
     <svg viewBox="0 0 32 32">
-      <rect x="3" y="3" width="26" height="26" rx="3" />
+      <path d="M16 3l13 9.4-5 15.6H8l-5-15.6z" />
     </svg>
   );
 }
 
-const ANS_CLASS = ["a0", "a1", "a2", "a3"] as const;
-const BAR_CLASS = ["b0", "b1", "b2", "b3"] as const;
+const ANS_CLASS = ["a0", "a1", "a2", "a3", "a4"] as const;
+const BAR_CLASS = ["b0", "b1", "b2", "b3", "b4"] as const;
 
 export default function EventHostPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -337,6 +343,14 @@ export default function EventHostPage() {
   const isRevealPhase =
     session?.state === "question_active" && questionElapsedMs < REVEAL_MS;
 
+  // Two-step question flow: "preview" shows the question (host + phones) with no
+  // timer/voting; "votingOpen" (set by the host) starts the timer and lets
+  // phones answer.
+  const votingOpen =
+    session?.state === "question_active" && !!session.question_started_at;
+  const previewing =
+    session?.state === "question_active" && !session.question_started_at;
+
   const autoAdvancing = useRef(false);
   useEffect(() => {
     if (!session) return;
@@ -344,6 +358,8 @@ export default function EventHostPage() {
       autoAdvancing.current = false;
       return;
     }
+    // Preview phase (question shown, voting not opened yet) — never auto-advance.
+    if (!session.question_started_at) return;
     if (remainingSec > 0) return;
     if (autoAdvancing.current) return;
     autoAdvancing.current = true;
@@ -365,11 +381,23 @@ export default function EventHostPage() {
       .update({
         state: "question_active" as SessionState,
         current_question_id: first.id,
-        question_started_at: new Date().toISOString(),
+        question_started_at: null,
       })
       .eq("id", session.id);
     setAdvancing(false);
   }, [advancing, questions, session, supabase]);
+
+  // Open voting on the currently-previewed question: start the timer and let
+  // phones answer. (Question + options were already on screen during preview.)
+  const openVoting = useCallback(async () => {
+    if (!session || advancing) return;
+    setAdvancing(true);
+    await supabase
+      .from("game_sessions")
+      .update({ question_started_at: new Date().toISOString() })
+      .eq("id", session.id);
+    setAdvancing(false);
+  }, [advancing, session, supabase]);
 
   const endQuestionNow = useCallback(async () => {
     if (!session || advancing) return;
@@ -436,7 +464,7 @@ export default function EventHostPage() {
         .update({
           state: "question_active" as SessionState,
           current_question_id: next.id,
-          question_started_at: new Date().toISOString(),
+          question_started_at: null,
         })
         .eq("id", session.id);
     } else {
@@ -476,6 +504,10 @@ export default function EventHostPage() {
 
       if (session.state === "waiting") {
         if (participants.length > 0) startFirst();
+      } else if (session.state === "question_active") {
+        // First press shows-then-opens voting; second press ends the question.
+        if (!session.question_started_at) openVoting();
+        else endQuestionNow();
       } else if (session.state === "showing_results") {
         goNext();
       } else if (session.state === "ended") {
@@ -484,7 +516,15 @@ export default function EventHostPage() {
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [session, participants.length, startFirst, goNext, startFresh]);
+  }, [
+    session,
+    participants.length,
+    startFirst,
+    openVoting,
+    endQuestionNow,
+    goNext,
+    startFresh,
+  ]);
 
   // ---------- RENDER ----------
 
@@ -753,10 +793,14 @@ export default function EventHostPage() {
                   >
                     שאלה {currentIndex + 1} מתוך {questions.length}
                   </span>
-                  <CountdownRing
-                    remaining={remainingSec}
-                    total={QUESTION_SECONDS}
-                  />
+                  {votingOpen ? (
+                    <CountdownRing
+                      remaining={remainingSec}
+                      total={QUESTION_SECONDS}
+                    />
+                  ) : (
+                    <span className="viewtag">הצגת שאלה</span>
+                  )}
                 </div>
 
                 <div className="q-text">{currentQuestion.question_text}</div>
@@ -782,7 +826,7 @@ export default function EventHostPage() {
                           <OptionShape index={idx} />
                         </span>
                         <span className="label">{opt.text}</span>
-                        {!isRevealPhase && (
+                        {votingOpen && !isRevealPhase && (
                           <motion.span
                             key={`cnt-${opt.id}-${count}`}
                             initial={{ scale: 0.7 }}
@@ -802,7 +846,31 @@ export default function EventHostPage() {
                   })}
                 </div>
 
-                {!isRevealPhase && (
+                {previewing && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.4 }}
+                    className="mt-5 flex justify-center"
+                  >
+                    <button
+                      onClick={openVoting}
+                      disabled={advancing}
+                      className="next-btn"
+                      style={{
+                        padding: "clamp(12px,1.3vw,18px) clamp(30px,3vw,46px)",
+                        fontSize: "clamp(1.05rem,1.6vw,1.5rem)",
+                      }}
+                    >
+                      פתח הצבעה
+                      <svg viewBox="0 0 24 24">
+                        <path d="M8 5v14l11-7z" />
+                      </svg>
+                    </button>
+                  </motion.div>
+                )}
+
+                {votingOpen && !isRevealPhase && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}

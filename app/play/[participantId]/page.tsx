@@ -17,7 +17,7 @@ import type {
 
 type FullQuestion = Question & { answer_options: AnswerOption[] };
 
-const ANS_CLASS = ["a0", "a1", "a2", "a3"] as const;
+const ANS_CLASS = ["a0", "a1", "a2", "a3", "a4"] as const;
 
 function OptionShape({ index }: { index: number }) {
   if (index === 0)
@@ -38,9 +38,15 @@ function OptionShape({ index }: { index: number }) {
         <circle cx="16" cy="16" r="14" />
       </svg>
     );
+  if (index === 3)
+    return (
+      <svg viewBox="0 0 32 32">
+        <rect x="3" y="3" width="26" height="26" rx="3" />
+      </svg>
+    );
   return (
     <svg viewBox="0 0 32 32">
-      <rect x="3" y="3" width="26" height="26" rx="3" />
+      <path d="M16 3l13 9.4-5 15.6H8l-5-15.6z" />
     </svg>
   );
 }
@@ -260,10 +266,18 @@ export default function PlayerPage() {
     ? (myAnswers.get(currentQuestion.id) ?? null)
     : null;
 
+  // Voting is open only once the host opens it (question_started_at set).
+  // Before that we're in the "preview" phase: the question is shown read-only.
+  const votingOpen =
+    session?.state === "question_active" && !!session.question_started_at;
+  const previewing =
+    session?.state === "question_active" && !session.question_started_at;
+
   async function submitAnswer(optionId: string) {
     if (!session || !me || !currentQuestion) return;
     if (myAnswer || submitting) return;
     if (session.state !== "question_active") return;
+    if (!session.question_started_at) return; // voting not opened yet
     setSubmitting(true);
     setMyAnswers((prev) => {
       const next = new Map(prev);
@@ -391,10 +405,61 @@ export default function PlayerPage() {
               </motion.section>
             )}
 
-            {/* ---------- QUESTION ACTIVE — choose answer ---------- */}
-            {session.state === "question_active" &&
-              currentQuestion &&
-              !myAnswer && (
+            {/* ---------- QUESTION PREVIEW — read-only, voting not open ---------- */}
+            {previewing && currentQuestion && (
+              <motion.section
+                key={`q-${currentQuestion.id}-preview`}
+                initial={{ opacity: 0, y: 18 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -18 }}
+                transition={{ duration: 0.4 }}
+                className="flex w-full max-w-md flex-col gap-4"
+              >
+                <div className="flex items-center justify-between text-white/75">
+                  <span
+                    className="text-sm font-bold"
+                    style={{ fontFamily: "var(--font-heebo)" }}
+                  >
+                    שאלה {currentIndex + 1} / {questions.length}
+                  </span>
+                  <span className="viewtag">הצגת שאלה</span>
+                </div>
+                <div
+                  className="q-text"
+                  style={{ fontSize: "clamp(1.1rem, 4vw, 1.5rem)" }}
+                >
+                  {currentQuestion.question_text}
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-3">
+                  {currentQuestion.answer_options.map((opt, idx) => (
+                    <div
+                      key={opt.id}
+                      className={`ans-card ${ANS_CLASS[idx]} flex aspect-square flex-col items-center justify-center gap-2 text-center`}
+                      style={{ opacity: 0.85 }}
+                    >
+                      <span className="shape h-9 w-9">
+                        <OptionShape index={idx} />
+                      </span>
+                      <span
+                        className="label text-base font-bold leading-tight"
+                        style={{
+                          textAlign: "center",
+                          fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)",
+                        }}
+                      >
+                        {opt.text}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-1 text-center text-sm font-semibold text-white/70">
+                  ההצבעה תיפתח עוד רגע — קראו את השאלה והתשובות
+                </p>
+              </motion.section>
+            )}
+
+            {/* ---------- VOTING OPEN — choose answer ---------- */}
+            {votingOpen && currentQuestion && !myAnswer && (
                 <motion.section
                   key={`q-${currentQuestion.id}-pick`}
                   initial={{ opacity: 0, y: 18 }}
@@ -464,10 +529,8 @@ export default function PlayerPage() {
                 </motion.section>
               )}
 
-            {/* ---------- QUESTION ACTIVE — locked (answered) ---------- */}
-            {session.state === "question_active" &&
-              currentQuestion &&
-              myAnswer && (
+            {/* ---------- VOTING OPEN — locked (answered) ---------- */}
+            {votingOpen && currentQuestion && myAnswer && (
                 <motion.section
                   key={`q-${currentQuestion.id}-locked`}
                   initial={{ opacity: 0, scale: 0.92 }}

@@ -499,6 +499,9 @@ body {
 .a3 {
   background: linear-gradient(135deg, var(--navy), var(--navy-deep));
 }
+.a4 {
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9);
+}
 
 /* ============ Result bars ============ */
 .barcol {
@@ -534,6 +537,9 @@ body {
 }
 .barcol.b3 .bar {
   background: var(--navy);
+}
+.barcol.b4 .bar {
+  background: #8b5cf6;
 }
 .barcol.correct .bar {
   outline: 4px solid var(--gold);
