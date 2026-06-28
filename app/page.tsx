@@ -571,6 +571,22 @@ export default function EventHostPage() {
     [runExclusive, session, questions, supabase],
   );
 
+  // End the whole quiz immediately — compute final scores and jump to the
+  // leaderboard. Recoverable: "back" from the ended screen returns to the last
+  // question's results.
+  const endQuiz = useCallback(
+    () =>
+      runExclusive(async () => {
+        if (!session) return;
+        await recomputeScores();
+        await supabase
+          .from("game_sessions")
+          .update({ state: "ended" as SessionState })
+          .eq("id", session.id);
+      }),
+    [runExclusive, session, supabase, recomputeScores],
+  );
+
   const startFresh = useCallback(async () => {
     if (typeof window !== "undefined")
       localStorage.removeItem(SESSION_STORAGE_KEY);
@@ -1243,6 +1259,19 @@ export default function EventHostPage() {
               </svg>
               קוד הצטרפות
             </button>
+            {session.state !== "waiting" && session.state !== "ended" && (
+              <button
+                onClick={endQuiz}
+                disabled={advancing}
+                className="host-mini-btn danger disabled:opacity-40"
+                title="סיום החידון ומעבר לתוצאות הסופיות"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                  <rect x="6" y="6" width="12" height="12" rx="2" />
+                </svg>
+                סיים חידון
+              </button>
+            )}
             {session.state === "ended" && (
               <button
                 onClick={startFresh}
@@ -1305,9 +1334,12 @@ export default function EventHostPage() {
                     <div style={{ height: 260 }} />
                   )}
                 </div>
-                <div className="pin-box mt-4" style={{ padding: "12px 20px" }}>
+                <div className="join-pin mt-4">
                   <span className="lbl">או הצטרפות עם קוד</span>
-                  <span className="pin" style={{ fontSize: "clamp(2rem, 5vw, 3rem)" }}>
+                  <span
+                    className="pin"
+                    style={{ fontSize: "clamp(2.4rem, 6vw, 3.4rem)" }}
+                  >
                     {formattedCode}
                   </span>
                 </div>
