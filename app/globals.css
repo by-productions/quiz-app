@@ -965,3 +965,33 @@ body {
 .host-dock .next-btn {
   box-shadow: 0 14px 34px -14px rgba(0, 0, 0, 0.55);
 }
+.host-mini-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-family: "Polin", var(--font-heebo), sans-serif;
+  font-weight: 700;
+  font-size: 0.95rem;
+  padding: 9px 18px;
+  border-radius: 50px;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  backdrop-filter: blur(6px);
+  transition:
+    transform 0.2s,
+    background 0.2s;
+}
+.host-mini-btn svg {
+  width: 16px;
+  height: 16px;
+  color: #fff;
+}
+.host-mini-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.18);
+}
+.host-mini-btn:disabled {
+  cursor: not-allowed;
+}

@@ -69,6 +69,8 @@ export default function EventHostPage() {
   >([]);
   const [origin, setOrigin] = useState("");
   const [advancing, setAdvancing] = useState(false);
+  // Host can pop the join QR over any screen so latecomers can still scan in.
+  const [showJoin, setShowJoin] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") setOrigin(window.location.origin);
@@ -371,110 +373,203 @@ export default function EventHostPage() {
     })();
   }, [remainingSec, session, supabase]);
 
-  const startFirst = useCallback(async () => {
-    if (!session || advancing) return;
-    const first = questions[0];
-    if (!first) return;
+  // Synchronous re-entrancy lock for every host state transition. `advancing`
+  // is React state and updates asynchronously, so two presentation-clicker
+  // events firing in the same render frame could both pass an `if (advancing)`
+  // check and double-advance (skipping a question + double-scoring). A ref
+  // flips synchronously, so the second call bails immediately. try/finally
+  // guarantees the lock is always released — a stuck lock would freeze the host.
+  const transitionLock = useRef(false);
+  const runExclusive = useCallback(async (fn: () => Promise<void>) => {
+    if (transitionLock.current) return;
+    transitionLock.current = true;
     setAdvancing(true);
-    await supabase
-      .from("game_sessions")
-      .update({
-        state: "question_active" as SessionState,
-        current_question_id: first.id,
-        question_started_at: null,
-      })
-      .eq("id", session.id);
-    setAdvancing(false);
-  }, [advancing, questions, session, supabase]);
+    try {
+      await fn();
+    } finally {
+      setAdvancing(false);
+      transitionLock.current = false;
+    }
+  }, []);
 
-  // Open voting on the currently-previewed question: start the timer and let
-  // phones answer. (Question + options were already on screen during preview.)
-  const openVoting = useCallback(async () => {
-    if (!session || advancing) return;
-    setAdvancing(true);
-    await supabase
-      .from("game_sessions")
-      .update({ question_started_at: new Date().toISOString() })
-      .eq("id", session.id);
-    setAdvancing(false);
-  }, [advancing, session, supabase]);
-
-  const endQuestionNow = useCallback(async () => {
-    if (!session || advancing) return;
-    setAdvancing(true);
-    await supabase
-      .from("game_sessions")
-      .update({ state: "showing_results" as SessionState })
-      .eq("id", session.id);
-    setAdvancing(false);
-  }, [advancing, session, supabase]);
-
-  const goNext = useCallback(async () => {
-    if (!session || !currentQuestion || advancing) return;
-    setAdvancing(true);
-
-    const correct = currentQuestion.answer_options.find((o) => o.is_correct);
-    if (correct) {
-      // Authoritative scoring: re-read this question's responses straight from
-      // the DB so scores are correct even if some realtime INSERT events were
-      // dropped under load. Base each +100 on the DB score, not local state.
-      const { data: rows } = await supabase
-        .from("responses")
-        .select("participant_id, answer_data")
-        .eq("session_id", session.id)
-        .eq("question_id", currentQuestion.id);
-      const correctIds = Array.from(
-        new Set(
-          (
-            (rows ?? []) as Array<{
-              participant_id: string;
-              answer_data: { option_id?: string };
-            }>
-          )
-            .filter((r) => r.answer_data?.option_id === correct.id)
-            .map((r) => r.participant_id),
-        ),
-      );
-      if (correctIds.length > 0) {
-        const { data: scoreRows } = await supabase
-          .from("participants")
-          .select("id, score")
-          .in("id", correctIds);
-        const scoreMap = new Map<string, number>(
-          (
-            (scoreRows ?? []) as Array<{ id: string; score: number | null }>
-          ).map((p) => [p.id, p.score ?? 0]),
-        );
-        await Promise.all(
-          correctIds.map((pid) =>
-            supabase
-              .from("participants")
-              .update({ score: (scoreMap.get(pid) ?? 0) + 100 })
-              .eq("id", pid),
-          ),
+  // Authoritative, idempotent scoring: each participant's score is recomputed
+  // from scratch as (# of their correct answers) × 100, read straight from the
+  // DB. Because it's absolute (not incremental) it's safe to run any number of
+  // times — so the host can step backward and forward through questions without
+  // ever double-counting. Run once when the quiz ends.
+  const recomputeScores = useCallback(async () => {
+    if (!session) return;
+    const correctByQuestion = new Map<string, string>();
+    for (const q of questions) {
+      const c = q.answer_options.find((o) => o.is_correct);
+      if (c) correctByQuestion.set(q.id, c.id);
+    }
+    const { data: rows } = await supabase
+      .from("responses")
+      .select("participant_id, question_id, answer_data")
+      .eq("session_id", session.id);
+    const scoreByParticipant = new Map<string, number>();
+    for (const r of (rows ?? []) as Array<{
+      participant_id: string;
+      question_id: string;
+      answer_data: { option_id?: string };
+    }>) {
+      const correctId = correctByQuestion.get(r.question_id);
+      if (correctId && r.answer_data?.option_id === correctId) {
+        scoreByParticipant.set(
+          r.participant_id,
+          (scoreByParticipant.get(r.participant_id) ?? 0) + 100,
         );
       }
     }
+    // Write each scorer's absolute total straight from the responses, so even a
+    // participant the host never saw join still gets the right score. Anyone
+    // with no correct answers keeps the column default of 0.
+    await Promise.all(
+      Array.from(scoreByParticipant.entries()).map(([pid, score]) =>
+        supabase.from("participants").update({ score }).eq("id", pid),
+      ),
+    );
+  }, [session, questions, supabase]);
 
-    const idx = questions.findIndex((q) => q.id === currentQuestion.id);
-    const next = questions[idx + 1];
-    if (next) {
-      await supabase
-        .from("game_sessions")
-        .update({
-          state: "question_active" as SessionState,
-          current_question_id: next.id,
-          question_started_at: null,
-        })
-        .eq("id", session.id);
-    } else {
-      await supabase
-        .from("game_sessions")
-        .update({ state: "ended" as SessionState })
-        .eq("id", session.id);
-    }
-    setAdvancing(false);
-  }, [advancing, currentQuestion, questions, session, supabase]);
+  const startFirst = useCallback(
+    () =>
+      runExclusive(async () => {
+        if (!session) return;
+        const first = questions[0];
+        if (!first) return;
+        await supabase
+          .from("game_sessions")
+          .update({
+            state: "question_active" as SessionState,
+            current_question_id: first.id,
+            question_started_at: null,
+          })
+          .eq("id", session.id);
+      }),
+    [runExclusive, questions, session, supabase],
+  );
+
+  // Open voting on the currently-previewed question: start the timer and let
+  // phones answer. (Question + options were already on screen during preview.)
+  const openVoting = useCallback(
+    () =>
+      runExclusive(async () => {
+        if (!session) return;
+        await supabase
+          .from("game_sessions")
+          .update({ question_started_at: new Date().toISOString() })
+          .eq("id", session.id);
+      }),
+    [runExclusive, session, supabase],
+  );
+
+  const endQuestionNow = useCallback(
+    () =>
+      runExclusive(async () => {
+        if (!session) return;
+        await supabase
+          .from("game_sessions")
+          .update({ state: "showing_results" as SessionState })
+          .eq("id", session.id);
+      }),
+    [runExclusive, session, supabase],
+  );
+
+  const goNext = useCallback(
+    () =>
+      runExclusive(async () => {
+        if (!session || !currentQuestion) return;
+        const idx = questions.findIndex((q) => q.id === currentQuestion.id);
+        const next = questions[idx + 1];
+        if (next) {
+          await supabase
+            .from("game_sessions")
+            .update({
+              state: "question_active" as SessionState,
+              current_question_id: next.id,
+              question_started_at: null,
+            })
+            .eq("id", session.id);
+        } else {
+          // Last question — compute final scores from the DB, then end.
+          await recomputeScores();
+          await supabase
+            .from("game_sessions")
+            .update({ state: "ended" as SessionState })
+            .eq("id", session.id);
+        }
+      }),
+    [runExclusive, currentQuestion, questions, session, supabase, recomputeScores],
+  );
+
+  // Step one transition backward — the mirror image of the forward flow, so a
+  // host who advanced too fast (or wants to revisit a question) can recover from
+  // any screen. Scoring is recomputed from the DB only at the end, so moving
+  // back and forth never corrupts the leaderboard.
+  const goBack = useCallback(
+    () =>
+      runExclusive(async () => {
+        if (!session) return;
+        if (session.state === "question_active") {
+          if (session.question_started_at) {
+            // Voting open → back to the read-only preview (closes voting/timer).
+            await supabase
+              .from("game_sessions")
+              .update({ question_started_at: null })
+              .eq("id", session.id);
+          } else {
+            // Preview → previous question's results, or back to the lobby.
+            const idx = questions.findIndex(
+              (q) => q.id === session.current_question_id,
+            );
+            const prev = idx > 0 ? questions[idx - 1] : null;
+            if (prev) {
+              await supabase
+                .from("game_sessions")
+                .update({
+                  state: "showing_results" as SessionState,
+                  current_question_id: prev.id,
+                  question_started_at: null,
+                })
+                .eq("id", session.id);
+            } else {
+              await supabase
+                .from("game_sessions")
+                .update({
+                  state: "waiting" as SessionState,
+                  current_question_id: null,
+                  question_started_at: null,
+                })
+                .eq("id", session.id);
+            }
+          }
+        } else if (session.state === "showing_results") {
+          // Results → back to this question's preview (re-show it, voting closed).
+          await supabase
+            .from("game_sessions")
+            .update({
+              state: "question_active" as SessionState,
+              question_started_at: null,
+            })
+            .eq("id", session.id);
+        } else if (session.state === "ended") {
+          // Ended → back to the last question's results.
+          const last = questions[questions.length - 1];
+          if (last) {
+            await supabase
+              .from("game_sessions")
+              .update({
+                state: "showing_results" as SessionState,
+                current_question_id: last.id,
+                question_started_at: null,
+              })
+              .eq("id", session.id);
+          }
+        }
+      }),
+    [runExclusive, session, questions, supabase],
+  );
 
   const startFresh = useCallback(async () => {
     if (typeof window !== "undefined")
@@ -498,8 +593,28 @@ export default function EventHostPage() {
         "ArrowRight",
         "PageDown",
       ]);
-      if (!advanceKeys.has(e.key)) return;
+      // Clicker "previous" / left arrow steps the event backward.
+      const backKeys = new Set(["ArrowLeft", "PageUp"]);
       if (e.repeat) return;
+      // While the join-QR overlay is up, any nav/Escape key just closes it —
+      // never advances the quiz behind it.
+      if (showJoin) {
+        if (
+          e.key === "Escape" ||
+          advanceKeys.has(e.key) ||
+          backKeys.has(e.key)
+        ) {
+          e.preventDefault();
+          setShowJoin(false);
+        }
+        return;
+      }
+      if (backKeys.has(e.key)) {
+        e.preventDefault();
+        goBack();
+        return;
+      }
+      if (!advanceKeys.has(e.key)) return;
       e.preventDefault();
 
       if (session.state === "waiting") {
@@ -519,10 +634,12 @@ export default function EventHostPage() {
   }, [
     session,
     participants.length,
+    showJoin,
     startFirst,
     openVoting,
     endQuestionNow,
     goNext,
+    goBack,
     startFresh,
   ]);
 
@@ -1095,20 +1212,116 @@ export default function EventHostPage() {
 
         {/* Host controls — tucked into the bottom-right corner, revealed on hover */}
         <div className="host-dock" aria-label="פקדי מנחה">
-          {session.state === "ended" && (
+          <div className="flex items-center gap-2">
+            {session.state !== "waiting" && (
+              <button
+                onClick={goBack}
+                disabled={advancing}
+                className="host-mini-btn disabled:opacity-40"
+                title="חזרה אחורה (גם עם ← בקליקר)"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2.5}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M15 18l-6-6 6-6" />
+                </svg>
+                אחורה
+              </button>
+            )}
             <button
-              onClick={startFresh}
-              className="next-btn"
-              style={{ fontSize: "1rem", padding: "10px 22px" }}
+              onClick={() => setShowJoin(true)}
+              className="host-mini-btn"
+              title="הצגת קוד QR להצטרפות"
             >
-              <svg viewBox="0 0 24 24">
-                <path d="M12 5V1L7 6l5 5V7a6 6 0 11-6 6H4a8 8 0 108-8z" />
+              <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                <path d="M3 3h8v8H3V3zm2 2v4h4V5H5zm8-2h8v8h-8V3zm2 2v4h4V5h-4zM3 13h8v8H3v-8zm2 2v4h4v-4H5zm13-2h3v2h-3v-2zm0 4h3v4h-2v-2h-1v-2zm-5-4h2v3h-2v-3zm0 5h2v3h-2v-3z" />
               </svg>
-              אתגר חדש
+              קוד הצטרפות
             </button>
-          )}
+            {session.state === "ended" && (
+              <button
+                onClick={startFresh}
+                className="next-btn"
+                style={{ fontSize: "1rem", padding: "10px 22px" }}
+              >
+                <svg viewBox="0 0 24 24">
+                  <path d="M12 5V1L7 6l5 5V7a6 6 0 11-6 6H4a8 8 0 108-8z" />
+                </svg>
+                אתגר חדש
+              </button>
+            )}
+          </div>
           <KbdHint />
         </div>
+
+        {/* Join-QR overlay — poppable from any screen for latecomers */}
+        <AnimatePresence>
+          {showJoin && (
+            <motion.div
+              key="join-overlay"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              onClick={() => setShowJoin(false)}
+              className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-6 p-6"
+              style={{ background: "rgba(7,20,40,0.82)", backdropFilter: "blur(6px)" }}
+            >
+              <motion.div
+                initial={{ scale: 0.9, y: 16 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.9, y: 16 }}
+                transition={{ duration: 0.3 }}
+                onClick={(e) => e.stopPropagation()}
+                className="qr-card"
+                style={{ padding: 28 }}
+              >
+                <div className="qtitle" style={{ fontSize: "1.5rem", marginBottom: 4 }}>
+                  סרקו להצטרפות
+                </div>
+                <div
+                  className="qsub"
+                  dir="ltr"
+                  style={{ fontSize: "1rem", marginBottom: 16 }}
+                >
+                  {origin && origin.replace(/^https?:\/\//, "")}/join
+                </div>
+                <div className="qr-wrap" style={{ width: "min(420px, 70vw)", padding: 14 }}>
+                  {joinUrl ? (
+                    <QRCodeSVG
+                      value={joinUrl}
+                      size={400}
+                      level="M"
+                      marginSize={0}
+                      bgColor="#ffffff"
+                      fgColor="#173d6e"
+                    />
+                  ) : (
+                    <div style={{ height: 260 }} />
+                  )}
+                </div>
+                <div className="pin-box mt-4" style={{ padding: "12px 20px" }}>
+                  <span className="lbl">או הצטרפות עם קוד</span>
+                  <span className="pin" style={{ fontSize: "clamp(2rem, 5vw, 3rem)" }}>
+                    {formattedCode}
+                  </span>
+                </div>
+              </motion.div>
+              <button
+                onClick={() => setShowJoin(false)}
+                className="next-btn"
+                style={{ fontSize: "1.1rem", padding: "12px 32px" }}
+              >
+                סגירה
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </main>
     </>
   );
