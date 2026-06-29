@@ -89,7 +89,7 @@ begin
   insert into public.questions (quiz_id, question_text, type, position, time_limit)
   values (v_quiz_id, 'נשים עם אנגיואדמה תורשתית (מכל התתי-סוגים) סובלות לעיתים קרובות מהחמרה דרמטית בתדירות ובעוצמת ההתקפים בתקופות מסוימות בחיים. מהו המנגנון ההורמונלי המרכזי שמסביר תופעה זו?', 'multiple_choice', 8, 30) returning id into v_q_id;
   insert into public.answer_options (question_id, text, is_correct, position) values
-    (v_q_id, 'אסטרוגן מגביר את יצירת הקאלקרין דרך ה 90-shock protein-heat', true , 0),
+    (v_q_id, 'אסטרוגן מגביר את יצירת הקאלקרין דרך ה-⁦heat-shock protein 90⁩', true , 0),
     (v_q_id, 'רמות גבוהות של פרוגסטרון מעכבות ישירות את שעתוק הגן SERPING1', false, 1),
     (v_q_id, 'הורמון ה-LH (Luteinizing hormone) נקשר לקולטני ברדיקינין ומפעיל אותם בצורה צולבת', false, 2),
     (v_q_id, 'פרולקטין גורם לירידה חדה בייצור המשלים בכבד במהלך תקופת ההנקה בלבד', false, 3);
