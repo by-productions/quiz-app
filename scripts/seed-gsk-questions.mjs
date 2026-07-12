@@ -67,9 +67,29 @@ const QUESTIONS = [
       "אני לא בטוח/ה — המידע עד כה אינו מספק",
     ],
   },
+  {
+    q: "על סמך אילו פרמטרים בפרקטיקה יומית תחליטו על מתן טיפול החזקתי PARPI למטופלות עם Ovarian HGSC?",
+    opts: [
+      "תוצאות HRD/BRCA mut",
+      "תוצאות PET CT בסיום טיפול כימי",
+      "תוצאות KELIM SCORE",
+      "תוצאות CRS",
+      "תשובות 1-2",
+      "כל התשובות נכונות",
+    ],
+  },
+  {
+    q: "א.ב. בת 51 מאובחנת עם סרטן שחלה. מטופלת במעכבי PARP — טיפול חדש מזה כחודשיים. בבדיקות מעבדה: המוגלובין 7.4, לפני שבועיים 9.8, לפני התחלת הטיפול 11. מה על האישה לעשות?",
+    opts: [
+      "לפנות לרופא משפחה לשקול טיפול בעירוי ברזל",
+      "לפנות לאונקולוג המטפל בהקדם",
+      "לפנות למיון לקבלת מנת דם",
+      "לפנות לאחות מתאמת / מומחית קלינית לאונקולוגיה",
+    ],
+  },
 ];
 
-if (QUESTIONS.length !== 5) process.exit(1);
+if (QUESTIONS.length !== 7) process.exit(1);
 if (process.env.EMIT_JSON) {
   console.log(JSON.stringify(QUESTIONS));
   process.exit(0);
@@ -122,4 +142,4 @@ for (let i = 0; i < QUESTIONS.length; i++) {
   }
   console.log(`Q${i + 1}: ${item.opts.length} opts (poll)`);
 }
-console.log("✅ seeded 5 poll questions");
+console.log(`✅ seeded ${QUESTIONS.length} poll questions`);

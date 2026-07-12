@@ -17,7 +17,7 @@ import type {
 
 type FullQuestion = Question & { answer_options: AnswerOption[] };
 
-const ANS_CLASS = ["a0", "a1", "a2", "a3", "a4"] as const;
+const ANS_CLASS = ["a0", "a1", "a2", "a3", "a4", "a5"] as const;
 
 function OptionShape({ index }: { index: number }) {
   if (index === 0)
@@ -44,9 +44,15 @@ function OptionShape({ index }: { index: number }) {
         <rect x="3" y="3" width="26" height="26" rx="3" />
       </svg>
     );
+  if (index === 4)
+    return (
+      <svg viewBox="0 0 32 32">
+        <path d="M16 3l13 9.4-5 15.6H8l-5-15.6z" />
+      </svg>
+    );
   return (
     <svg viewBox="0 0 32 32">
-      <path d="M16 3l13 9.4-5 15.6H8l-5-15.6z" />
+      <path d="M16 3 L28 9.5 L28 22.5 L16 29 L4 22.5 L4 9.5 Z" />
     </svg>
   );
 }

@@ -94,12 +94,13 @@ body {
     radial-gradient(900px 600px at 0% 108%, #0d2a63 0%, transparent 55%),
     linear-gradient(160deg, #0d2350, var(--navy-deep));
 }
+/* Static mesh — no animation (a moving large SVG repaints the whole
+   viewport each frame and flickers on a projector). */
 .event-bg .mesh {
   position: absolute;
-  inset: -20%;
-  width: 140%;
-  height: 140%;
-  animation: drift 44s ease-in-out infinite;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
 @keyframes drift {
@@ -496,6 +497,9 @@ body {
 .a4 {
   background: linear-gradient(135deg, var(--red), var(--red-deep));
 }
+.a5 {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
 
 /* ============ Result bars ============ */
 .barcol {
@@ -534,6 +538,9 @@ body {
 }
 .barcol.b4 .bar {
   background: var(--red);
+}
+.barcol.b5 .bar {
+  background: #10b981;
 }
 
 /* ============ Sponsor band (white strip of partner logos) ============ */

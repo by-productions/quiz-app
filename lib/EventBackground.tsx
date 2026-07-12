@@ -1,5 +1,8 @@
 // Shared molecular-network backdrop for the gynaeco-oncology forum —
-// faint connected nodes drifting over a deep-navy field (matches the poster).
+// faint connected nodes over a deep-navy field (matches the poster). Static
+// (no animation) and memoized so it never repaints on timer/vote re-renders.
+import { memo } from "react";
+
 const NODES: [number, number, number][] = [
   [80, 120, 6], [230, 60, 4], [380, 160, 5], [520, 80, 3], [680, 150, 6],
   [820, 90, 4], [930, 200, 5], [140, 300, 4], [300, 340, 6], [470, 300, 4],
@@ -19,7 +22,7 @@ for (let i = 0; i < NODES.length; i++) {
   }
 }
 
-export default function EventBackground() {
+function EventBackground() {
   return (
     <div className="event-bg" aria-hidden>
       <svg
@@ -47,3 +50,5 @@ export default function EventBackground() {
     </div>
   );
 }
+
+export default memo(EventBackground);

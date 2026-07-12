@@ -48,15 +48,21 @@ function OptionShape({ index }: { index: number }) {
         <rect x="3" y="3" width="26" height="26" rx="3" />
       </svg>
     );
+  if (index === 4)
+    return (
+      <svg viewBox="0 0 32 32">
+        <path d="M16 3l13 9.4-5 15.6H8l-5-15.6z" />
+      </svg>
+    );
   return (
     <svg viewBox="0 0 32 32">
-      <path d="M16 3l13 9.4-5 15.6H8l-5-15.6z" />
+      <path d="M16 3 L28 9.5 L28 22.5 L16 29 L4 22.5 L4 9.5 Z" />
     </svg>
   );
 }
 
-const ANS_CLASS = ["a0", "a1", "a2", "a3", "a4"] as const;
-const BAR_CLASS = ["b0", "b1", "b2", "b3", "b4"] as const;
+const ANS_CLASS = ["a0", "a1", "a2", "a3", "a4", "a5"] as const;
+const BAR_CLASS = ["b0", "b1", "b2", "b3", "b4", "b5"] as const;
 
 export default function EventHostPage() {
   const supabase = useMemo(() => createClient(), []);
@@ -735,7 +741,7 @@ export default function EventHostPage() {
                       className="host-credit mt-2"
                       style={{ fontSize: "clamp(1.05rem, 1.7vw, 1.5rem)" }}
                     >
-                      יום ב&apos; 16/3/26{" "}
+                      יום ב&apos; 20/7/26{" "}
                       <span className="role">· 18:30–21:30 · נס ציונה</span>
                     </div>
                     <p
@@ -1018,11 +1024,63 @@ export default function EventHostPage() {
                   {currentQuestion.question_text}
                 </div>
 
-                <PieResults
-                  options={currentQuestion.answer_options}
-                  voteCounts={voteCounts}
-                  total={totalVotes}
-                />
+                <div
+                  className="mt-5 grid items-end gap-3 sm:gap-5"
+                  style={{
+                    gridTemplateColumns: `repeat(${currentQuestion.answer_options.length}, 1fr)`,
+                    height: "min(44vh, 360px)",
+                  }}
+                >
+                  {currentQuestion.answer_options.map((opt, idx) => {
+                    const count = voteCounts[opt.id] ?? 0;
+                    const pct =
+                      totalVotes > 0
+                        ? Math.round((count / totalVotes) * 100)
+                        : 0;
+                    const barH = maxVote > 0 ? (count / maxVote) * 100 : 0;
+                    return (
+                      <div key={opt.id} className={`barcol ${BAR_CLASS[idx]}`}>
+                        <motion.div
+                          className="bar"
+                          initial={{ height: 0 }}
+                          animate={{ height: `${Math.max(barH, 8)}%` }}
+                          transition={{
+                            duration: 0.8,
+                            type: "spring",
+                            stiffness: 80,
+                            damping: 16,
+                          }}
+                        >
+                          {pct}%
+                        </motion.div>
+                        <div className="sh-box">
+                          <OptionShape index={idx} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div
+                  className="mt-4 grid gap-3 sm:gap-5"
+                  style={{
+                    gridTemplateColumns: `repeat(${currentQuestion.answer_options.length}, 1fr)`,
+                  }}
+                >
+                  {currentQuestion.answer_options.map((opt) => (
+                    <div
+                      key={opt.id}
+                      className="text-center font-bold leading-tight"
+                      style={{
+                        color: "rgba(255,255,255,0.82)",
+                        fontFamily: "var(--font-heebo)",
+                        fontSize: "clamp(1rem, 1.6vw, 1.6rem)",
+                      }}
+                    >
+                      {opt.text}
+                    </div>
+                  ))}
+                </div>
 
                 <div className="mt-6 flex flex-col items-center gap-2 text-center">
                   <button
@@ -1226,145 +1284,6 @@ function SponsorBand({ className = "" }: { className?: string }) {
       {SPONSORS.map((s) => (
         <Image key={s.alt} src={s.src} alt={s.alt} width={s.w} height={s.h} />
       ))}
-    </div>
-  );
-}
-
-const PIE_COLORS = ["#3b82f6", "#18b3c6", "#f4b13a", "#8b5cf6", "#ee4d6b"];
-
-// Results as a donut: each option's share of the vote, with % labels + legend.
-function PieResults({
-  options,
-  voteCounts,
-  total,
-}: {
-  options: AnswerOption[];
-  voteCounts: Record<string, number>;
-  total: number;
-}) {
-  const size = 340;
-  const r = 150;
-  const c = 170;
-  const hole = 84;
-  let acc = -Math.PI / 2; // start at 12 o'clock
-  const slices = options.map((opt, idx) => {
-    const count = voteCounts[opt.id] ?? 0;
-    const frac = total > 0 ? count / total : 0;
-    const a0 = acc;
-    const a1 = acc + frac * 2 * Math.PI;
-    acc = a1;
-    return { opt, idx, count, frac, a0, a1, color: PIE_COLORS[idx % 5] };
-  });
-  return (
-    <div className="mt-5 flex flex-wrap items-center justify-center gap-x-12 gap-y-6">
-      <svg
-        viewBox={`0 0 ${size} ${size}`}
-        style={{ width: "min(40vw, 360px)", flexShrink: 0 }}
-      >
-        {total === 0 && (
-          <circle cx={c} cy={c} r={r} fill="rgba(255,255,255,0.08)" />
-        )}
-        {slices.map((s) => {
-          if (s.frac <= 0) return null;
-          if (s.frac >= 0.9999)
-            return <circle key={s.opt.id} cx={c} cy={c} r={r} fill={s.color} />;
-          const x1 = c + r * Math.cos(s.a0);
-          const y1 = c + r * Math.sin(s.a0);
-          const x2 = c + r * Math.cos(s.a1);
-          const y2 = c + r * Math.sin(s.a1);
-          const large = s.a1 - s.a0 > Math.PI ? 1 : 0;
-          return (
-            <path
-              key={s.opt.id}
-              d={`M ${c} ${c} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`}
-              fill={s.color}
-              stroke="#0a1c44"
-              strokeWidth="2"
-            />
-          );
-        })}
-        <circle cx={c} cy={c} r={hole} fill="#0a1c44" />
-        <text
-          x={c}
-          y={c - 4}
-          textAnchor="middle"
-          fill="#fff"
-          style={{ fontFamily: "var(--font-heebo)", fontWeight: 800, fontSize: 34 }}
-        >
-          {total}
-        </text>
-        <text
-          x={c}
-          y={c + 22}
-          textAnchor="middle"
-          fill="rgba(255,255,255,0.7)"
-          style={{ fontFamily: "var(--font-heebo)", fontSize: 15 }}
-        >
-          הצבעות
-        </text>
-        {slices.map((s) =>
-          s.frac < 0.06 ? null : (
-            <text
-              key={s.opt.id + "p"}
-              x={c + ((r + hole) / 2) * Math.cos((s.a0 + s.a1) / 2)}
-              y={c + ((r + hole) / 2) * Math.sin((s.a0 + s.a1) / 2)}
-              textAnchor="middle"
-              dominantBaseline="central"
-              fill="#fff"
-              style={{
-                fontFamily: "var(--font-heebo)",
-                fontWeight: 800,
-                fontSize: 21,
-              }}
-            >
-              {Math.round(s.frac * 100)}%
-            </text>
-          ),
-        )}
-      </svg>
-
-      <div
-        className="flex flex-col gap-2.5"
-        style={{ maxWidth: "min(48vw, 640px)" }}
-      >
-        {slices.map((s) => (
-          <div key={s.opt.id} className="flex items-center gap-3">
-            <span
-              style={{
-                width: "clamp(22px, 1.8vw, 30px)",
-                height: "clamp(22px, 1.8vw, 30px)",
-                borderRadius: 8,
-                background: s.color,
-                flexShrink: 0,
-              }}
-            />
-            <span
-              className="font-bold leading-tight"
-              style={{
-                color: "rgba(255,255,255,0.9)",
-                fontFamily: "var(--font-heebo)",
-                fontSize: "clamp(1rem, 1.5vw, 1.5rem)",
-                textAlign: "right",
-              }}
-            >
-              {s.opt.text}
-            </span>
-            <span
-              className="tabular-nums"
-              style={{
-                marginRight: "auto",
-                paddingRight: 12,
-                color: s.color,
-                fontFamily: "var(--font-heebo)",
-                fontWeight: 900,
-                fontSize: "clamp(1.2rem, 1.9vw, 1.9rem)",
-              }}
-            >
-              {Math.round(s.frac * 100)}%
-            </span>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
