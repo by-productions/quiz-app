@@ -25,9 +25,9 @@ const cormorant = Cormorant_Garamond({
 });
 
 export const metadata: Metadata = {
-  title: "חידון HAE — אירוע ההשקה של Andembry",
+  title: "פורום דרום גינקואונקולוגי — סקר אינטראקטיבי",
   description:
-    "אירוע ההשקה של Andembry — חידון אינטראקטיבי על HAE ו-garadacimab. מאת B.Y Productions עבור CSL ישראל.",
+    "פורום דרום גינקואונקולוגי — סקר אינטראקטיבי לקהל.",
 };
 
 export default function RootLayout({

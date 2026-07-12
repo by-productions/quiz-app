@@ -5,6 +5,7 @@ import Image from "next/image";
 import { QRCodeSVG } from "qrcode.react";
 import { AnimatePresence, motion } from "motion/react";
 import { createClient } from "@/lib/supabase/client";
+import EventBackground from "@/lib/EventBackground";
 import { generateJoinCode } from "@/lib/joinCode";
 import { useNow, remainingSeconds } from "@/lib/timer";
 import { ANDEMBRY_QUIZ_ID, QUESTION_SECONDS } from "@/lib/eventConfig";
@@ -710,26 +711,17 @@ export default function EventHostPage() {
     <>
       <EventBackground />
       <main className="host-stage relative z-10 flex h-screen flex-col overflow-hidden">
-        {/* TOPBAR — one logo per corner, larger, full color */}
+        {/* TOPBAR — forum wordmark */}
         <header className="flex items-center justify-between px-8 py-4 sm:px-14">
-          {/* RIGHT corner (RTL) — Andembry, full color on a white chip */}
-          <Image
-            src="/andembry-logo.png"
-            alt="Andembry"
-            width={300}
-            height={64}
-            priority
-            className="h-14 w-auto rounded-2xl bg-white px-5 py-2.5 sm:h-[4.5rem]"
-          />
-          {/* LEFT corner — CSL */}
-          <Image
-            src="/csl-logo.png"
-            alt="CSL"
-            width={220}
-            height={52}
-            priority
-            className="h-12 w-auto rounded-2xl bg-white px-5 py-2.5 sm:h-16"
-          />
+          <div
+            className="eyebrow-mini"
+            style={{
+              fontSize: "clamp(0.85rem, 1.3vw, 1.15rem)",
+              letterSpacing: "0.16em",
+            }}
+          >
+            פורום דרום גינקואונקולוגי
+          </div>
         </header>
 
         {/* STAGE */}
@@ -755,23 +747,23 @@ export default function EventHostPage() {
                         letterSpacing: "0.2em",
                       }}
                     >
-                      חידון HAE אינטראקטיבי
+                      סקר אינטראקטיבי
                     </div>
                     <h1
                       className="hero-title mt-2"
                       style={{
                         textAlign: "right",
-                        fontSize: "clamp(2.2rem, 4.8vw, 4.2rem)",
+                        fontSize: "clamp(2rem, 4.4vw, 3.9rem)",
                       }}
                     >
-                      אירוע ההשקה של <span className="g">Andembry</span>
+                      פורום דרום <span className="g">גינקואונקולוגי</span>
                     </h1>
                     <div
                       className="host-credit mt-2"
                       style={{ fontSize: "clamp(1.05rem, 1.7vw, 1.5rem)" }}
                     >
-                      בהנחיית נגה ניר-נאמן{" "}
-                      <span className="role">· חדשות 13</span>
+                      יום ב&apos; 16/3/26{" "}
+                      <span className="role">· 18:30–21:30 · נס ציונה</span>
                     </div>
                     <p
                       className="mt-2 max-w-xl"
@@ -781,8 +773,8 @@ export default function EventHostPage() {
                         lineHeight: 1.45,
                       }}
                     >
-                      סרקו את הקוד עם הנייד, הצטרפו לחידון ובדקו את הידע שלכם
-                      על HAE ועל <span dir="ltr">Andembry</span>.
+                      סרקו את הקוד עם הנייד והצטרפו — לפני כל הרצאה תעלה שאלה
+                      ונראה יחד את התפלגות התשובות.
                     </p>
 
                     <div className="mt-4 flex flex-col gap-2">
@@ -891,7 +883,7 @@ export default function EventHostPage() {
                         fontSize: "clamp(1.05rem,1.6vw,1.5rem)",
                       }}
                     >
-                      להתחלת החידון
+                      להתחלת הסקר
                       <svg viewBox="0 0 24 24">
                         <path d="M8 5v14l11-7z" />
                       </svg>
@@ -903,6 +895,8 @@ export default function EventHostPage() {
                     </p>
                   )}
                 </div>
+
+                <SponsorBand className="mx-auto mt-4 max-w-4xl" />
               </motion.section>
             )}
 
@@ -938,45 +932,59 @@ export default function EventHostPage() {
 
                 <div className="q-text">{currentQuestion.question_text}</div>
 
-                <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                {/* Live vote bars — grow in real time while voting is open */}
+                <div
+                  className="mt-5 grid items-end gap-3 sm:gap-5"
+                  style={{
+                    gridTemplateColumns: `repeat(${currentQuestion.answer_options.length}, 1fr)`,
+                    height: "min(40vh, 320px)",
+                  }}
+                >
                   {currentQuestion.answer_options.map((opt, idx) => {
                     const count = voteCounts[opt.id] ?? 0;
+                    const pct = (count / maxVote) * 100;
                     return (
-                      <motion.div
-                        key={opt.id}
-                        initial={{ opacity: 0, y: 16, scale: 0.95 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        transition={{
-                          delay: idx * 0.08,
-                          duration: 0.4,
-                          type: "spring",
-                          stiffness: 180,
-                          damping: 18,
-                        }}
-                        className={`ans-card ${ANS_CLASS[idx]}`}
-                      >
-                        <span className="shape">
+                      <div key={opt.id} className={`barcol ${BAR_CLASS[idx]}`}>
+                        <motion.div
+                          className="bar"
+                          animate={{
+                            height: votingOpen ? `${Math.max(pct, 6)}%` : "6%",
+                          }}
+                          transition={{
+                            type: "spring",
+                            stiffness: 90,
+                            damping: 16,
+                          }}
+                        >
+                          {votingOpen ? count : ""}
+                        </motion.div>
+                        <div className="sh-box">
                           <OptionShape index={idx} />
-                        </span>
-                        <span className="label">{opt.text}</span>
-                        {votingOpen && !isRevealPhase && (
-                          <motion.span
-                            key={`cnt-${opt.id}-${count}`}
-                            initial={{ scale: 0.7 }}
-                            animate={{ scale: 1 }}
-                            transition={{
-                              type: "spring",
-                              stiffness: 280,
-                              damping: 16,
-                            }}
-                            className="cnt"
-                          >
-                            {count}
-                          </motion.span>
-                        )}
-                      </motion.div>
+                        </div>
+                      </div>
                     );
                   })}
+                </div>
+
+                <div
+                  className="mt-4 grid gap-3 sm:gap-5"
+                  style={{
+                    gridTemplateColumns: `repeat(${currentQuestion.answer_options.length}, 1fr)`,
+                  }}
+                >
+                  {currentQuestion.answer_options.map((opt) => (
+                    <div
+                      key={opt.id}
+                      className="text-center font-bold leading-tight"
+                      style={{
+                        color: "rgba(255,255,255,0.82)",
+                        fontFamily: "var(--font-heebo)",
+                        fontSize: "clamp(1rem, 1.5vw, 1.5rem)",
+                      }}
+                    >
+                      {opt.text}
+                    </div>
+                  ))}
                 </div>
 
                 {previewing && (
@@ -1075,13 +1083,8 @@ export default function EventHostPage() {
                   {currentQuestion.answer_options.map((opt, idx) => {
                     const count = voteCounts[opt.id] ?? 0;
                     const pct = (count / maxVote) * 100;
-                    const isCorrect = opt.is_correct;
-                    const dim = !isCorrect;
                     return (
-                      <div
-                        key={opt.id}
-                        className={`barcol ${BAR_CLASS[idx]} ${isCorrect ? "correct" : ""} ${dim ? "dim" : ""}`}
-                      >
+                      <div key={opt.id} className={`barcol ${BAR_CLASS[idx]}`}>
                         <motion.div
                           className="bar"
                           initial={{ height: 0 }}
@@ -1114,9 +1117,7 @@ export default function EventHostPage() {
                       key={opt.id}
                       className="text-center font-bold leading-tight"
                       style={{
-                        color: opt.is_correct
-                          ? "var(--gold)"
-                          : "rgba(255,255,255,0.65)",
+                        color: "rgba(255,255,255,0.82)",
                         fontFamily: "var(--font-heebo)",
                         fontSize: "clamp(1.05rem, 1.7vw, 1.65rem)",
                       }}
@@ -1157,70 +1158,25 @@ export default function EventHostPage() {
                 className="w-full max-w-5xl text-center"
               >
                 <div
-                  className="mb-3 text-6xl"
+                  className="mb-4 text-6xl"
                   style={{ animation: "beat 1.6s ease-in-out infinite" }}
                 >
-                  🏆
+                  ✨
                 </div>
                 <h1
                   className="hero-title"
-                  style={{ fontSize: "clamp(2.6rem, 6vw, 4.6rem)" }}
+                  style={{ fontSize: "clamp(2.4rem, 5.5vw, 4.2rem)" }}
                 >
-                  אירוע ההשקה של <span className="g">Andembry</span>
+                  תודה <span className="g">שהשתתפתם!</span>
                 </h1>
                 <p
-                  className="mt-3 font-bold text-white/90"
-                  style={{ fontSize: "clamp(1.3rem, 2.6vw, 2rem)" }}
+                  className="mt-3 font-bold text-white/85"
+                  style={{ fontSize: "clamp(1.2rem, 2.4vw, 1.9rem)" }}
                 >
-                  כל הכבוד למשתתפים. והמנצחים הם:
+                  פורום דרום גינקואונקולוגי
                 </p>
 
-                {(() => {
-                  const ranked = [...participants].sort(
-                    (a, b) => (b.score ?? 0) - (a.score ?? 0),
-                  );
-                  const podium = ranked.slice(0, 3);
-                  // Display silver-gold-bronze in visual order: 2nd, 1st, 3rd
-                  const visualOrder = [1, 0, 2]
-                    .map((rank) =>
-                      podium[rank] ? { p: podium[rank], rank } : null,
-                    )
-                    .filter(
-                      (
-                        v,
-                      ): v is { p: Participant; rank: number } => v !== null,
-                    );
-
-                  return (
-                    <>
-                      <div className="mt-8 flex items-end justify-center gap-4">
-                        {visualOrder.map(({ p, rank }) => {
-                          const cls = `p${rank + 1}` as
-                            | "p1"
-                            | "p2"
-                            | "p3";
-                          return (
-                            <motion.div
-                              key={p.id}
-                              initial={{ opacity: 0, y: 60 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{
-                                duration: 0.6,
-                                delay: (2 - rank) * 0.25,
-                                ease: "easeOut",
-                              }}
-                              className={`pod ${cls}`}
-                            >
-                              <div className="medal">{rank + 1}</div>
-                              <div className="pname">{p.nickname}</div>
-                              <div className="block">{p.score ?? 0}</div>
-                            </motion.div>
-                          );
-                        })}
-                      </div>
-                    </>
-                  );
-                })()}
+                <SponsorBand className="mx-auto mt-10 max-w-4xl" />
               </motion.section>
             )}
           </AnimatePresence>
@@ -1264,12 +1220,12 @@ export default function EventHostPage() {
                 onClick={endQuiz}
                 disabled={advancing}
                 className="host-mini-btn danger disabled:opacity-40"
-                title="סיום החידון ומעבר לתוצאות הסופיות"
+                title="סיום הסקר"
               >
                 <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
                   <rect x="6" y="6" width="12" height="12" rx="2" />
                 </svg>
-                סיים חידון
+                סיים סקר
               </button>
             )}
             {session.state === "ended" && (
@@ -1359,34 +1315,20 @@ export default function EventHostPage() {
   );
 }
 
-function EventBackground() {
+const SPONSORS = [
+  { src: "/sponsors/gsk.png", alt: "GSK", w: 1280, h: 720 },
+  { src: "/sponsors/msd.png", alt: "MSD", w: 1280, h: 508 },
+  { src: "/sponsors/eisai.png", alt: "Eisai", w: 1200, h: 720 },
+  { src: "/sponsors/medison.jpg", alt: "Medison", w: 1280, h: 447 },
+  { src: "/sponsors/astrazeneca.jpg", alt: "AstraZeneca", w: 750, h: 511 },
+];
+
+function SponsorBand({ className = "" }: { className?: string }) {
   return (
-    <div className="event-bg" aria-hidden>
-      <svg className="s1" viewBox="0 0 1000 1000" fill="none">
-        <path
-          d="M-100 250 Q 300 100 600 280 T 1100 240"
-          stroke="#04b49d"
-          strokeWidth="50"
-          strokeLinecap="round"
-          opacity="0.16"
-        />
-        <path
-          d="M-100 340 Q 300 190 600 370 T 1100 330"
-          stroke="#fec84e"
-          strokeWidth="44"
-          strokeLinecap="round"
-          opacity="0.14"
-        />
-      </svg>
-      <svg className="s2" viewBox="0 0 1000 1000" fill="none">
-        <path
-          d="M-100 700 Q 300 560 600 740 T 1100 690"
-          stroke="#04b49d"
-          strokeWidth="56"
-          strokeLinecap="round"
-          opacity="0.12"
-        />
-      </svg>
+    <div className={`sponsor-band ${className}`}>
+      {SPONSORS.map((s) => (
+        <Image key={s.alt} src={s.src} alt={s.alt} width={s.w} height={s.h} />
+      ))}
     </div>
   );
 }

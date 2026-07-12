@@ -3,41 +3,9 @@
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { motion } from "motion/react";
 import { createClient } from "@/lib/supabase/client";
-
-function EventBackground() {
-  return (
-    <div className="event-bg" aria-hidden>
-      <svg className="s1" viewBox="0 0 1000 1000" fill="none">
-        <path
-          d="M-100 250 Q 300 100 600 280 T 1100 240"
-          stroke="#04b49d"
-          strokeWidth="50"
-          strokeLinecap="round"
-          opacity="0.16"
-        />
-        <path
-          d="M-100 340 Q 300 190 600 370 T 1100 330"
-          stroke="#fec84e"
-          strokeWidth="44"
-          strokeLinecap="round"
-          opacity="0.14"
-        />
-      </svg>
-      <svg className="s2" viewBox="0 0 1000 1000" fill="none">
-        <path
-          d="M-100 700 Q 300 560 600 740 T 1100 690"
-          stroke="#04b49d"
-          strokeWidth="56"
-          strokeLinecap="round"
-          opacity="0.12"
-        />
-      </svg>
-    </div>
-  );
-}
+import EventBackground from "@/lib/EventBackground";
 
 export default function JoinPage() {
   return (
@@ -179,24 +147,12 @@ function JoinForm() {
   return (
     <main className="relative z-10 flex min-h-screen flex-col">
       <header className="flex items-center justify-between px-5 py-4 sm:px-8">
-        {/* RIGHT corner (RTL) — Andembry, full color on a white chip */}
-        <Image
-          src="/andembry-logo.png"
-          alt="Andembry"
-          width={160}
-          height={34}
-          priority
-          className="h-9 w-auto rounded-xl bg-white px-2.5 py-1.5"
-        />
-        {/* LEFT corner — CSL */}
-        <Image
-          src="/csl-logo.png"
-          alt="CSL"
-          width={130}
-          height={30}
-          priority
-          className="h-8 w-auto rounded-xl bg-white px-2.5 py-1.5"
-        />
+        <div
+          className="eyebrow-mini"
+          style={{ fontSize: "0.72rem", letterSpacing: "0.12em" }}
+        >
+          פורום דרום גינקואונקולוגי
+        </div>
       </header>
 
       <div className="flex flex-1 flex-col items-center justify-center gap-6 px-5 pb-10">
@@ -210,13 +166,13 @@ function JoinForm() {
             className="eyebrow-mini"
             style={{ fontSize: "clamp(1rem, 4.5vw, 1.3rem)", letterSpacing: "0.18em" }}
           >
-            חידון HAE אינטראקטיבי
+            סקר אינטראקטיבי
           </div>
           <h1
             className="hero-title mt-2"
-            style={{ fontSize: "clamp(1.9rem, 8vw, 3rem)" }}
+            style={{ fontSize: "clamp(1.7rem, 7.5vw, 2.8rem)" }}
           >
-            אירוע ההשקה של <span className="g">Andembry</span>
+            פורום דרום <span className="g">גינקואונקולוגי</span>
           </h1>
           <p className="mt-3 text-white/75">
             {hasPrefilledCode ? (
@@ -274,7 +230,7 @@ function JoinForm() {
             disabled={joining}
             className="pbtn mt-2"
           >
-            {joining ? "מצטרף/ת…" : "הצטרפות לחידון"}
+            {joining ? "מצטרף/ת…" : "הצטרפות לסקר"}
           </button>
         </motion.form>
 
