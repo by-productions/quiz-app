@@ -238,8 +238,6 @@ export default function PlayerPage() {
   // Before that we're in the "preview" phase: the question is shown read-only.
   const votingOpen =
     session?.state === "question_active" && !!session.question_started_at;
-  const previewing =
-    session?.state === "question_active" && !session.question_started_at;
 
   async function submitAnswer(optionId: string) {
     if (!session || !me || !currentQuestion) return;
@@ -352,59 +350,6 @@ export default function PlayerPage() {
                 >
                   {me.nickname}
                 </span>
-              </motion.section>
-            )}
-
-            {/* ---------- QUESTION PREVIEW — read-only, voting not open ---------- */}
-            {previewing && currentQuestion && (
-              <motion.section
-                key={`q-${currentQuestion.id}-preview`}
-                initial={{ opacity: 0, y: 18 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -18 }}
-                transition={{ duration: 0.4 }}
-                className="flex w-full max-w-md flex-col gap-4"
-              >
-                <div className="flex items-center justify-between text-white/75">
-                  <span
-                    className="text-sm font-bold"
-                    style={{ fontFamily: "var(--font-heebo)" }}
-                  >
-                    שאלה {currentIndex + 1} / {questions.length}
-                  </span>
-                  <span className="viewtag">הצגת שאלה</span>
-                </div>
-                <div
-                  className="q-text"
-                  style={{ fontSize: "clamp(1.1rem, 4vw, 1.5rem)" }}
-                >
-                  {currentQuestion.question_text}
-                </div>
-                <div className="mt-2 grid grid-cols-2 gap-3">
-                  {currentQuestion.answer_options.map((opt, idx) => (
-                    <div
-                      key={opt.id}
-                      className={`ans-card ${ANS_CLASS[idx]} flex aspect-square flex-col items-center justify-center gap-2 text-center`}
-                      style={{ opacity: 0.85 }}
-                    >
-                      <span className="shape h-9 w-9">
-                        <OptionShape index={idx} />
-                      </span>
-                      <span
-                        className="label text-base font-bold leading-tight"
-                        style={{
-                          textAlign: "center",
-                          fontSize: "clamp(0.9rem, 3.5vw, 1.05rem)",
-                        }}
-                      >
-                        {opt.text}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                <p className="mt-1 text-center text-sm font-semibold text-white/70">
-                  ההצבעה תיפתח עוד רגע — קראו את השאלה והתשובות
-                </p>
               </motion.section>
             )}
 

@@ -351,8 +351,6 @@ export default function EventHostPage() {
   // phones answer.
   const votingOpen =
     session?.state === "question_active" && !!session.question_started_at;
-  const previewing =
-    session?.state === "question_active" && !session.question_started_at;
 
   const autoAdvancing = useRef(false);
   useEffect(() => {
@@ -444,25 +442,11 @@ export default function EventHostPage() {
           .update({
             state: "question_active" as SessionState,
             current_question_id: first.id,
-            question_started_at: null,
+            question_started_at: new Date().toISOString(),
           })
           .eq("id", session.id);
       }),
     [runExclusive, questions, session, supabase],
-  );
-
-  // Open voting on the currently-previewed question: start the timer and let
-  // phones answer. (Question + options were already on screen during preview.)
-  const openVoting = useCallback(
-    () =>
-      runExclusive(async () => {
-        if (!session) return;
-        await supabase
-          .from("game_sessions")
-          .update({ question_started_at: new Date().toISOString() })
-          .eq("id", session.id);
-      }),
-    [runExclusive, session, supabase],
   );
 
   const endQuestionNow = useCallback(
@@ -489,7 +473,7 @@ export default function EventHostPage() {
             .update({
               state: "question_active" as SessionState,
               current_question_id: next.id,
-              question_started_at: null,
+              question_started_at: new Date().toISOString(),
             })
             .eq("id", session.id);
         } else {
@@ -513,45 +497,37 @@ export default function EventHostPage() {
       runExclusive(async () => {
         if (!session) return;
         if (session.state === "question_active") {
-          if (session.question_started_at) {
-            // Voting open → back to the read-only preview (closes voting/timer).
+          // Back to the previous question's results, or the lobby.
+          const idx = questions.findIndex(
+            (q) => q.id === session.current_question_id,
+          );
+          const prev = idx > 0 ? questions[idx - 1] : null;
+          if (prev) {
             await supabase
               .from("game_sessions")
-              .update({ question_started_at: null })
+              .update({
+                state: "showing_results" as SessionState,
+                current_question_id: prev.id,
+                question_started_at: null,
+              })
               .eq("id", session.id);
           } else {
-            // Preview → previous question's results, or back to the lobby.
-            const idx = questions.findIndex(
-              (q) => q.id === session.current_question_id,
-            );
-            const prev = idx > 0 ? questions[idx - 1] : null;
-            if (prev) {
-              await supabase
-                .from("game_sessions")
-                .update({
-                  state: "showing_results" as SessionState,
-                  current_question_id: prev.id,
-                  question_started_at: null,
-                })
-                .eq("id", session.id);
-            } else {
-              await supabase
-                .from("game_sessions")
-                .update({
-                  state: "waiting" as SessionState,
-                  current_question_id: null,
-                  question_started_at: null,
-                })
-                .eq("id", session.id);
-            }
+            await supabase
+              .from("game_sessions")
+              .update({
+                state: "waiting" as SessionState,
+                current_question_id: null,
+                question_started_at: null,
+              })
+              .eq("id", session.id);
           }
         } else if (session.state === "showing_results") {
-          // Results → back to this question's preview (re-show it, voting closed).
+          // Results → re-open this question's voting.
           await supabase
             .from("game_sessions")
             .update({
               state: "question_active" as SessionState,
-              question_started_at: null,
+              question_started_at: new Date().toISOString(),
             })
             .eq("id", session.id);
         } else if (session.state === "ended") {
@@ -637,9 +613,7 @@ export default function EventHostPage() {
       if (session.state === "waiting") {
         if (participants.length > 0) startFirst();
       } else if (session.state === "question_active") {
-        // First press shows-then-opens voting; second press ends the question.
-        if (!session.question_started_at) openVoting();
-        else endQuestionNow();
+        endQuestionNow();
       } else if (session.state === "showing_results") {
         goNext();
       } else if (session.state === "ended") {
@@ -653,7 +627,6 @@ export default function EventHostPage() {
     participants.length,
     showJoin,
     startFirst,
-    openVoting,
     endQuestionNow,
     goNext,
     goBack,
@@ -920,14 +893,10 @@ export default function EventHostPage() {
                   >
                     שאלה {currentIndex + 1} מתוך {questions.length}
                   </span>
-                  {votingOpen ? (
-                    <CountdownRing
-                      remaining={remainingSec}
-                      total={QUESTION_SECONDS}
-                    />
-                  ) : (
-                    <span className="viewtag">הצגת שאלה</span>
-                  )}
+                  <CountdownRing
+                    remaining={remainingSec}
+                    total={QUESTION_SECONDS}
+                  />
                 </div>
 
                 <div className="q-text">{currentQuestion.question_text}</div>
@@ -986,30 +955,6 @@ export default function EventHostPage() {
                     </div>
                   ))}
                 </div>
-
-                {previewing && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.4 }}
-                    className="mt-5 flex justify-center"
-                  >
-                    <button
-                      onClick={openVoting}
-                      disabled={advancing}
-                      className="next-btn"
-                      style={{
-                        padding: "clamp(12px,1.3vw,18px) clamp(30px,3vw,46px)",
-                        fontSize: "clamp(1.05rem,1.6vw,1.5rem)",
-                      }}
-                    >
-                      פתח הצבעה
-                      <svg viewBox="0 0 24 24">
-                        <path d="M8 5v14l11-7z" />
-                      </svg>
-                    </button>
-                  </motion.div>
-                )}
 
                 {votingOpen && !isRevealPhase && (
                   <motion.div
@@ -1073,61 +1018,13 @@ export default function EventHostPage() {
                   {currentQuestion.question_text}
                 </div>
 
-                <div
-                  className="mt-5 grid items-end gap-3 sm:gap-5"
-                  style={{
-                    gridTemplateColumns: `repeat(${currentQuestion.answer_options.length}, 1fr)`,
-                    height: "min(46vh, 380px)",
-                  }}
-                >
-                  {currentQuestion.answer_options.map((opt, idx) => {
-                    const count = voteCounts[opt.id] ?? 0;
-                    const pct = (count / maxVote) * 100;
-                    return (
-                      <div key={opt.id} className={`barcol ${BAR_CLASS[idx]}`}>
-                        <motion.div
-                          className="bar"
-                          initial={{ height: 0 }}
-                          animate={{ height: `${Math.max(pct, 6)}%` }}
-                          transition={{
-                            duration: 0.9,
-                            type: "spring",
-                            stiffness: 80,
-                            damping: 16,
-                          }}
-                        >
-                          {count}
-                        </motion.div>
-                        <div className="sh-box">
-                          <OptionShape index={idx} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
+                <PieResults
+                  options={currentQuestion.answer_options}
+                  voteCounts={voteCounts}
+                  total={totalVotes}
+                />
 
-                <div
-                  className="mt-4 grid gap-3 sm:gap-5"
-                  style={{
-                    gridTemplateColumns: `repeat(${currentQuestion.answer_options.length}, 1fr)`,
-                  }}
-                >
-                  {currentQuestion.answer_options.map((opt) => (
-                    <div
-                      key={opt.id}
-                      className="text-center font-bold leading-tight"
-                      style={{
-                        color: "rgba(255,255,255,0.82)",
-                        fontFamily: "var(--font-heebo)",
-                        fontSize: "clamp(1.05rem, 1.7vw, 1.65rem)",
-                      }}
-                    >
-                      {opt.text}
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-5 flex flex-col items-center gap-2 text-center">
+                <div className="mt-6 flex flex-col items-center gap-2 text-center">
                   <button
                     onClick={goNext}
                     disabled={advancing}
@@ -1329,6 +1226,145 @@ function SponsorBand({ className = "" }: { className?: string }) {
       {SPONSORS.map((s) => (
         <Image key={s.alt} src={s.src} alt={s.alt} width={s.w} height={s.h} />
       ))}
+    </div>
+  );
+}
+
+const PIE_COLORS = ["#3b82f6", "#18b3c6", "#f4b13a", "#8b5cf6", "#ee4d6b"];
+
+// Results as a donut: each option's share of the vote, with % labels + legend.
+function PieResults({
+  options,
+  voteCounts,
+  total,
+}: {
+  options: AnswerOption[];
+  voteCounts: Record<string, number>;
+  total: number;
+}) {
+  const size = 340;
+  const r = 150;
+  const c = 170;
+  const hole = 84;
+  let acc = -Math.PI / 2; // start at 12 o'clock
+  const slices = options.map((opt, idx) => {
+    const count = voteCounts[opt.id] ?? 0;
+    const frac = total > 0 ? count / total : 0;
+    const a0 = acc;
+    const a1 = acc + frac * 2 * Math.PI;
+    acc = a1;
+    return { opt, idx, count, frac, a0, a1, color: PIE_COLORS[idx % 5] };
+  });
+  return (
+    <div className="mt-5 flex flex-wrap items-center justify-center gap-x-12 gap-y-6">
+      <svg
+        viewBox={`0 0 ${size} ${size}`}
+        style={{ width: "min(40vw, 360px)", flexShrink: 0 }}
+      >
+        {total === 0 && (
+          <circle cx={c} cy={c} r={r} fill="rgba(255,255,255,0.08)" />
+        )}
+        {slices.map((s) => {
+          if (s.frac <= 0) return null;
+          if (s.frac >= 0.9999)
+            return <circle key={s.opt.id} cx={c} cy={c} r={r} fill={s.color} />;
+          const x1 = c + r * Math.cos(s.a0);
+          const y1 = c + r * Math.sin(s.a0);
+          const x2 = c + r * Math.cos(s.a1);
+          const y2 = c + r * Math.sin(s.a1);
+          const large = s.a1 - s.a0 > Math.PI ? 1 : 0;
+          return (
+            <path
+              key={s.opt.id}
+              d={`M ${c} ${c} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`}
+              fill={s.color}
+              stroke="#0a1c44"
+              strokeWidth="2"
+            />
+          );
+        })}
+        <circle cx={c} cy={c} r={hole} fill="#0a1c44" />
+        <text
+          x={c}
+          y={c - 4}
+          textAnchor="middle"
+          fill="#fff"
+          style={{ fontFamily: "var(--font-heebo)", fontWeight: 800, fontSize: 34 }}
+        >
+          {total}
+        </text>
+        <text
+          x={c}
+          y={c + 22}
+          textAnchor="middle"
+          fill="rgba(255,255,255,0.7)"
+          style={{ fontFamily: "var(--font-heebo)", fontSize: 15 }}
+        >
+          הצבעות
+        </text>
+        {slices.map((s) =>
+          s.frac < 0.06 ? null : (
+            <text
+              key={s.opt.id + "p"}
+              x={c + ((r + hole) / 2) * Math.cos((s.a0 + s.a1) / 2)}
+              y={c + ((r + hole) / 2) * Math.sin((s.a0 + s.a1) / 2)}
+              textAnchor="middle"
+              dominantBaseline="central"
+              fill="#fff"
+              style={{
+                fontFamily: "var(--font-heebo)",
+                fontWeight: 800,
+                fontSize: 21,
+              }}
+            >
+              {Math.round(s.frac * 100)}%
+            </text>
+          ),
+        )}
+      </svg>
+
+      <div
+        className="flex flex-col gap-2.5"
+        style={{ maxWidth: "min(48vw, 640px)" }}
+      >
+        {slices.map((s) => (
+          <div key={s.opt.id} className="flex items-center gap-3">
+            <span
+              style={{
+                width: "clamp(22px, 1.8vw, 30px)",
+                height: "clamp(22px, 1.8vw, 30px)",
+                borderRadius: 8,
+                background: s.color,
+                flexShrink: 0,
+              }}
+            />
+            <span
+              className="font-bold leading-tight"
+              style={{
+                color: "rgba(255,255,255,0.9)",
+                fontFamily: "var(--font-heebo)",
+                fontSize: "clamp(1rem, 1.5vw, 1.5rem)",
+                textAlign: "right",
+              }}
+            >
+              {s.opt.text}
+            </span>
+            <span
+              className="tabular-nums"
+              style={{
+                marginRight: "auto",
+                paddingRight: 12,
+                color: s.color,
+                fontFamily: "var(--font-heebo)",
+                fontWeight: 900,
+                fontSize: "clamp(1.2rem, 1.9vw, 1.9rem)",
+              }}
+            >
+              {Math.round(s.frac * 100)}%
+            </span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
