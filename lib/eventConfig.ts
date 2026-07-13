@@ -6,7 +6,7 @@
 export const ANDEMBRY_QUIZ_ID = "beac6589-bea0-4e0d-9000-000000000001";
 
 /** Total time, in seconds, that players have to answer each question. */
-export const QUESTION_SECONDS = 30;
+export const QUESTION_SECONDS = 45;
 
 /** Branded Andembry colors for each of the 4 answer slots. */
 export const OPTION_PALETTE = [

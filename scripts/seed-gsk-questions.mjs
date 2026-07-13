@@ -129,7 +129,7 @@ for (let i = 0; i < QUESTIONS.length; i++) {
       question_text: item.q,
       type: "multiple_choice",
       position: i,
-      time_limit: 30,
+      time_limit: 45,
     })
     .select()
     .single();
