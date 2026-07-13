@@ -87,9 +87,18 @@ const QUESTIONS = [
       "לפנות לאחות מתאמת / מומחית קלינית לאונקולוגיה",
     ],
   },
+  {
+    q: "איזה מהבאים מהווה תמיד חלק בלתי נפרד מניתוח staging לסרטן רירית הרחם?",
+    opts: [
+      "כריתת רחם רדיקלית",
+      "כריתת אומנטום",
+      "דיסקציית בלוטות אגניות",
+      "שטיפות אגניות",
+    ],
+  },
 ];
 
-if (QUESTIONS.length !== 7) process.exit(1);
+if (QUESTIONS.length !== 8) process.exit(1);
 if (process.env.EMIT_JSON) {
   console.log(JSON.stringify(QUESTIONS));
   process.exit(0);
